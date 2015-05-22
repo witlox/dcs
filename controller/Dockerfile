@@ -6,7 +6,7 @@ MAINTAINER P. Witlox <pim.witlox@deltares.nl>
 CMD ["/sbin/my_init"]
 
 # First update repositories
-RUN apt-get update && apt-get upgrade
+RUN apt-get update
 
 # Install and configure our environment
 RUN apt-get install -y build-essential python-dev python-pip nginx git wget
