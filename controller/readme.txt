@@ -1,1 +1,1 @@
-This is the controller.
+The controller is the intermediate between the source (client) and the workers. Make sure that the disksize of the controller is sufficient, because at the moment finished jobs will transmit their results to the controller. These will stay there until the source retrieves them.
