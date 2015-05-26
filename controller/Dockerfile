@@ -1,4 +1,4 @@
-FROM ubuntu:precise
+FROM phusion/baseimage:0.9.16
 
 MAINTAINER P. Witlox <pim.witlox@deltares.nl>
 
@@ -10,13 +10,6 @@ RUN apt-get update
 RUN apt-get install -y build-essential python python-dev python-setuptools nginx supervisor git sqlite3
 RUN easy_install pip
 RUN pip install uwsgi
-
-# Update nginx
-RUN apt-get install -y python-software-properties
-RUN apt-get update
-RUN add-apt-repository -y ppa:nginx/stable
-
-
 
 # Stop nginx if it has started, remove default config
 RUN service nginx stop
