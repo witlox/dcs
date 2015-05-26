@@ -1,31 +1,35 @@
-FROM phusion/baseimage:0.9.16
+FROM ubuntu:precise
 
 MAINTAINER P. Witlox <pim.witlox@deltares.nl>
 
-# Use baseimage-docker's init system.
-CMD ["/sbin/my_init"]
-
 # First update repositories
+RUN echo "deb http://archive.ubuntu.com/ubuntu precise main universe" > /etc/apt/sources.list
 RUN apt-get update
 
 # Install and configure our environment
-RUN apt-get install -y build-essential python-dev python-pip nginx git
+RUN apt-get install -y build-essential python python-dev python-setuptools nginx supervisor git sqlite3
+RUN easy_install pip
 RUN pip install uwsgi
 
-# Stop nginx if it has started, overwrite default config
+# Update nginx
+RUN apt-get install -y python-software-properties
+RUN apt-get update
+RUN add-apt-repository -y ppa:nginx/stable
+
+
+
+# Stop nginx if it has started, remove default config
 RUN service nginx stop
 RUN rm /etc/nginx/sites-enabled/default
   
-# Get the repository and install reqs
+# Get the repository, install requirements and set config
 RUN git clone https://github.com/witlox/dcs.git && pip install -r dcs/controller/requirements.txt
+RUN ln -s ./dcs/controller/nginx.conf /etc/nginx/sites-enabled
+RUN ln -s ./dcs/controller/supervisor.conf /etc/supervisor/conf.d/
 
-# Copy config to correct location and restart nginx
-COPY dcs/contoller/nginx.conf /etc/nginx/sites-enabled/dcs.conf
-RUN service nginx start
-
-# Start uWSGI, need to convert this to service level start if desired
-RUN uwsgi --socket 127.0.0.1:8440 --wsgi-file dcs/controller/ilm.py --callable app --processes 1 --threads 2 --stats 127.0.0.1:9440
-RUN uwsgi --socket 127.0.0.1:8441 --wsgi-file dcs/controller/wjc.py --callable app --processes 1 --threads 2 --stats 127.0.0.1:9441
+# Start services
+expose 80
+cmd ["supervisord", "-n"]
 
 # Clean up APT when done.
 RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
