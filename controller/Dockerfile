@@ -3,12 +3,10 @@ FROM phusion/baseimage:0.9.16
 MAINTAINER P. Witlox <pim.witlox@deltares.nl>
 
 # First update repositories
-RUN echo "deb http://archive.ubuntu.com/ubuntu precise main universe" > /etc/apt/sources.list
 RUN apt-get update
 
 # Install and configure our environment
-RUN apt-get install -y build-essential python python-dev python-setuptools nginx supervisor git sqlite3
-RUN easy_install pip
+RUN apt-get install -y build-essential python-dev python-pip nginx supervisor git
 RUN pip install uwsgi
 
 # Stop nginx if it has started, remove default config
