@@ -14,12 +14,16 @@ RUN pip install uwsgi
 
 # Stop nginx if it has started, overwrite default config, and restart
 RUN service nginx stop
-RUN wget -q https://raw.githubusercontent.com/witlox/dcs/master/contoller/nginx.conf -O /etc/nginx.conf
+RUN rm /etc/nginx/sites-enabled/default
+RUN wget -q https://raw.githubusercontent.com/witlox/dcs/master/contoller/nginx.conf -O /etc/nginx/sites-enabled/dcs.conf
 RUN service nginx start
   
 # Get the repository and install reqs
 RUN git clone https://github.com/witlox/dcs.git && pip install -r dcs/controller/requirements.txt
 
-# start uWSGI, need to convert this to service level start if desired
-RUN uwsgi --socket 127.0.0.1:8440 --wsgi-file dcs/controller/ilm.py --callable app --processes 1 --threads 1 --stats 127.0.0.1:9440
-RUN uwsgi --socket 127.0.0.1:8441 --wsgi-file dcs/controller/wjc.py --callable app --processes 1 --threads 1 --stats 127.0.0.1:9441
+# Start uWSGI, need to convert this to service level start if desired
+RUN uwsgi --socket 127.0.0.1:8440 --wsgi-file dcs/controller/ilm.py --callable app --processes 1 --threads 2 --stats 127.0.0.1:9440
+RUN uwsgi --socket 127.0.0.1:8441 --wsgi-file dcs/controller/wjc.py --callable app --processes 1 --threads 2 --stats 127.0.0.1:9441
+
+# Clean up APT when done.
+RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
