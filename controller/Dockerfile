@@ -2,9 +2,6 @@ FROM ubuntu
 
 MAINTAINER P. Witlox <pim.witlox@deltares.nl>
 
-# Add application repository URL to the default sources
-RUN echo "deb http://archive.ubuntu.com/ubuntu/ raring main universe" >> /etc/apt/sources.list
-
 # First update repositories
 RUN apt-get update
 
