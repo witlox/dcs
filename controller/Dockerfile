@@ -17,12 +17,10 @@ RUN pip install uwsgi
 
 # Add the location for the source
 WORKDIR /opt
-ADD . dcs
-WORKDIR /opt/dcs
   
 # Get the repository, install requirements and set config
-RUN git clone https://github.com/witlox/dcs.git .
-RUN pip install -r controller/requirements.txt
+RUN git clone https://github.com/witlox/dcs.git
+RUN pip install -r dcs/controller/requirements.txt
 
 # Remove the default and set the new Nginx configuration
 RUN rm -v /etc/nginx/nginx.conf
