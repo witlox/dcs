@@ -33,8 +33,8 @@ RUN cp dcs/controller/supervisor.conf /etc/supervisor/conf.d/dcs.conf
 EXPOSE 80
 
 # Start services
-CMD service nginx start
-CMD service supervisord reload
+CMD service nginx restart
+CMD service supervisor restart
 
 # Clean up APT when done.
 RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
