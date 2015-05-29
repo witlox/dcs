@@ -21,13 +21,13 @@ RUN pip install -r dcs/controller/requirements.txt
 
 # Remove the default and set the new Nginx configuration
 RUN rm -v /etc/nginx/nginx.conf
-ADD /opt/dcs/controller/nginx.conf /etc/nginx/
+ADD dcs/controller/nginx.conf /etc/nginx/
 
 # Append "daemon off;" to the beginning of the configuration
 RUN echo "daemon off;" >> /etc/nginx/nginx.conf
 
 # Add the new supervisor config
-ADD /opt/dcs/controller/supervisor.conf /etc/supervisor/conf.d/
+ADD dcs/controller/supervisor.conf /etc/supervisor/conf.d/
 
 # Expose ports
 EXPOSE 80
