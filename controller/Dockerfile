@@ -7,9 +7,8 @@ RUN apt-get update
 
 # Install and configure our environment
 RUN apt-get install -y nginx
-RUN apt-get install -y python-dev python-pip 
-RUN apt-get install -y uwsgi
-RUN apt-get install -y uwsgi-plugin-python
+RUN apt-get install -y python python-dev python-distribute python-pip 
+RUN apt-get install -y uwsgi uwsgi-plugin-python
 RUN apt-get install -y git
 RUN pip install uwsgi
 
