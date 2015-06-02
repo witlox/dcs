@@ -23,6 +23,9 @@ WORKDIR /opt
 RUN git clone https://github.com/witlox/dcs.git
 RUN pip install -r dcs/controller/requirements.txt
 
+# Clean up APT and temp.
+RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
 # Remove the default and set the new Nginx configuration
 RUN rm -v /etc/nginx/nginx.conf
 RUN cp dcs/controller/nginx.conf /etc/nginx/nginx.conf
@@ -42,6 +45,3 @@ EXPOSE 80
 # Start services
 CMD service uwsgi restart
 CMD service nginx restart
-
-# Clean up APT when done.
-RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
