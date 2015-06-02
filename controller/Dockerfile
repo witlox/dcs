@@ -28,8 +28,9 @@ RUN pip install -r dcs/controller/requirements.txt
 RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Remove the default and set the new Nginx configuration
-RUN rm -v /etc/nginx/nginx.conf
-RUN cp dcs/controller/nginx.conf /etc/nginx/nginx.conf
+RUN rm -v /etc/nginx/sites-enabled/default
+RUN cp dcs/controller/nginx.conf /etc/nginx/sites-available/dcs
+RUN ln -s /etc/nginx/sites-available/dcs /etc/nginx/sites-enabled/dcs
 
 # Append "daemon off;" to the beginning of the configuration
 RUN echo "daemon off;" >> /etc/nginx/nginx.conf
