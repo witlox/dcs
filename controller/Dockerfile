@@ -44,5 +44,5 @@ RUN ln -s /etc/uwsgi/apps-available/wjc.ini /etc/uwsgi/apps-enabled/wjc.ini
 EXPOSE 80
 
 # Start services
-CMD service uwsgi restart
 CMD service nginx restart
+CMD service uwsgi restart
