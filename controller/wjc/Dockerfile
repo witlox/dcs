@@ -3,6 +3,6 @@ FROM lbracken/flask-uwsgi
 
 MAINTAINER Pim Witlox <pim.witlox@deltares.nl>
 
-CMD ["uwsgi", "--ini wjc.ini"]
+CMD ["uwsgi", "--ini", "wjc.ini"]
 
 EXPOSE 7000
