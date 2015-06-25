@@ -1,2 +1,10 @@
 flask-swagger
 pymongo
+mock
+Werkzeug
+Jinja2
+itsdangerous
+flask
+requests
+nose
+python-logstash

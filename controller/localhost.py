@@ -2,7 +2,7 @@ import argparse
 from ilm.api import api as ilm
 from wjc.api import api as wjc
 
-parser = argparse.ArgumentParser(description='Cumulonimbi Scheduler.')
+parser = argparse.ArgumentParser(description='run ilm or wjc locally.')
 
 # Compulsory arguments
 run_mode_group = parser.add_mutually_exclusive_group(required=True)
