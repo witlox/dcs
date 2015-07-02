@@ -1,4 +1,4 @@
-# dcs
+# dcs[![Build Status](https://travis-ci.org/witlox/dcs.svg?branch=master)](https://travis-ci.org/witlox/dcs)
 Deltares Cloud Scheduler - Simple Job Queue
 
 Want to have an easy and transparant way to run jobs on Amazon? This might suit you.
