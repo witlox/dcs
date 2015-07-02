@@ -1,104 +1,30 @@
 from flask import Flask, request, jsonify, Response
 
 from flask.json import dumps
-from flask_swagger import swagger
+from flask_autodoc import Autodoc
 
-from controller.ilm.repository import AmiRepository
-from controller.exceptions import ApplicationException
+from repository import AmiRepository
 
 api = Flask(__name__)
+auto = Autodoc(api)
 
 api.config['REPOSITORY'] = AmiRepository()
 
-@api.route("/")
-def spec():
-    swag = swagger(api)
-    swag['info']['version'] = "0.9"
-    swag['info']['title'] = "ILM"
-    return jsonify(swag)
-
-@api.route('/amis', methods=['GET'])
-def get_amis():
-    """
-        List currently registered AMI's
-        ---
-        tags:
-        - amis
-        responses:
-            200:
-                description: List of AMI id's
-    """
+def __get_amis__():
     repository = api.config['REPOSITORY']
     return Response(dumps(repository.get_all_amis()), mimetype='application/json')
 
-@api.route('/amis', methods=['POST'])
-def add_amis():
-    """
-        Register a new AMI
-        ---
-        tags:
-        - amis
-        parameters:
-          - in: body
-            name: body
-            schema:
-              id: AMI
-              required:
-                - name
-              optional:
-                - username
-                - password
-                - public_key
-                - private_key
-              properties:
-                name:
-                  type: string
-                  description: AMI id
-                username:
-                  type: string
-                  description: username for AMI access
-                password:
-                  type: string
-                  description: password for AMI access
-                public_key:
-                  type: string
-                  description: public key for AMI access
-                private_key:
-                  type: string
-                  description: private key for AMI access
-        responses:
-            200:
-                description: new AMI registered
-    """
+def __get_ami__(name):
+    repository = api.config['REPOSITORY']
+    return Response(dumps(repository.get_ami(name)), mimetype='application/json')
+
+def __add_amis__(request):
     data = request.get_json(force=True)
     repository = api.config['REPOSITORY']
-    aid = repository.insert_ami(data['name'], data['credentials'])
+    aid = repository.insert_ami(data['name'], data['username'], data['private_key'])
     return Response(dumps(aid), mimetype='application/json')
 
-@api.route('/amis', methods=['DELETE'])
-def remove_amis(name):
-    """
-        Unregister an AMI
-        ---
-        tags:
-        - amis
-        parameters:
-          - in: body
-            name: body
-            schema:
-              id: AMI
-              required:
-                - name
-              properties:
-                name:
-                  type: string
-                  description: AMI id
-        responses:
-            200:
-                description: AMI unregistered
-            500:
-                description: could not unregister AMI (maybe it doesn't exist)
-    """
+def __remove_amis__(name):
     repository = api.config['REPOSITORY']
     res = repository.delete_ami(name)
     if res:
@@ -106,11 +32,60 @@ def remove_amis(name):
     else:
         raise ApplicationException('Could not delete %s' % name)
 
+# actual api :P
+
+@api.route("/")
+def documentation():
+    return auto.html()
+
+@api.route('/amis', methods=['GET'])
+@auto.doc()
+def get_amis():
+    """ list currently registered AMI's """
+    return __get_amis__()
+
+
+@api.route('/ami/<name>', methods=['GET'])
+@auto.doc()
+def get_ami(name):
+    """ get requested AMI credentials """
+    return __get_ami__(name)
+
+
+@api.route('/amis', methods=['POST'])
+@auto.doc()
+def add_amis():
+    """
+    register a new AMI
+    :argument AMI (json) => {name, username, private key (pem)}}
+    """
+    return __add_amis__(request)
+
+@api.route('/amis/<name>', methods=['DELETE'])
+@auto.doc()
+def remove_amis(name):
+    """ unregister an AMI """
+    return __remove_amis__(name)
 
 # register error handlers
+class ApplicationException(Exception):
+    status_code = 500
+
+    def __init__(self, message, status_code=None, payload=None):
+        Exception.__init__(self)
+        self.message = message
+        if status_code is not None:
+            self.status_code = status_code
+        self.payload = payload
+
+    def to_dict(self):
+        rv = dict(self.payload or ())
+        rv['message'] = self.message
+        return rv
 
 @api.errorhandler(ApplicationException)
 def handle_application_exception(error):
     response = jsonify(error.to_dict())
     response.status_code = error.status_code
     return response
+

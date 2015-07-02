@@ -5,7 +5,8 @@ If you want to run the system on your local (development) machine, install the d
 
 The control flow is as follows:
 - start a controller, and specify the account details for the worker
-- start a source, in which you specify the job (currently a run script in the root)
+- start a store to use for file transfers
+- start a source, in which you specify the job (currently a 'run' script in the root)
 - the controller will pick up the job, start a new worker (ami), start the run script on the worker, retreive the work when finished
 - the source will then download the results to your machine
 

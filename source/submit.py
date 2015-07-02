@@ -1,0 +1,18 @@
+import argparse
+import json
+import requests
+
+parser = argparse.ArgumentParser(description='submit a job to the wjc, instance types can be found here: http://aws.amazon.com/ec2/instance-types/.')
+
+parser.add_argument('server', help='specifiy the web server address')
+parser.add_argument('ami', help='ami id')
+parser.add_argument('instance_type', help='AWS instance type')
+
+
+args = parser.parse_args()
+
+args = args.__dict__
+
+data = json.dumps({'ami': args['ami'], 'instance_type': args['instance_type']})
+r = requests.post('http://%s/wjc/jobs' % args['server'], data=data)
+print 'your job code is : %s' % r.content
