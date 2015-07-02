@@ -1,11 +1,13 @@
-from datetime import datetime, timedelta
 import json
 import logging
 import pickle
 import requests
 from threading import Timer
+
 import paramiko
+
 from settings import Settings
+
 
 class JobMidwife:
     def __init__(self, client):

@@ -1,5 +1,5 @@
 flask-swagger
-pymongo
+redis
 mock
 Werkzeug
 Jinja2
@@ -8,3 +8,4 @@ flask
 requests
 nose
 python-logstash
+paramiko
