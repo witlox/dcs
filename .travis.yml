@@ -1,10 +1,6 @@
 # file for running tests on travis-ci.com
 language: python
 # supported language versions
-env:
-  global:
-    - REPO="contoller/"
-    - CI_HOME=`pwd`/$REPO
 python:
   - "2.7"
   - "pypy"

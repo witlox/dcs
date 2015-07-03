@@ -7,7 +7,7 @@ import mock
 # don't want to create packages
 import sys
 
-sys.path.append('../ilm')
+sys.path.append('../controller/ilm')
 
 
 class TestIlm(unittest.TestCase):
