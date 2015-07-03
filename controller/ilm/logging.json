@@ -1,0 +1,36 @@
+{
+    "version": 1,
+    "disable_existing_loggers": "False",
+    "formatters": {
+        "standard": {
+          "format": "[ILM]-%(asctime)s[%(levelname)s](%(name)s):%(message)s",
+          "datefmt": "%Y-%m-%d %H:%M:%S"
+        },
+        "logstash": {
+          "format": "[ILM]-[%(levelname)s] %(message)s"
+        }
+    },
+    "handlers": {
+        "fh": {
+          "class": "logging.StreamHandler",
+          "formatter": "standard",
+          "level": "DEBUG",
+          "stream": "ext://sys.stdout"
+        },
+        "ls": {
+          "class": "logstash.TCPLogstashHandler",
+          "formatter": "logstash",
+          "level": "INFO",
+          "host": "elk",
+          "port": 9300,
+          "version": 1
+        }
+    },
+    "loggers": {
+        "": {
+          "handlers": ["fh", "ls"],
+          "level": "DEBUG",
+          "propagate": "True"
+        }
+    }
+}

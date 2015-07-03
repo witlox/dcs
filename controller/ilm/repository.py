@@ -1,15 +1,14 @@
 from datetime import datetime
+import json
 import pickle
 import logging
 import threading
 import redis
 import aws
+from logging.config import dictConfig
 from machine_midwife import MachineMidwife
 
-from settings import Settings
-
-settings = Settings()
-
+dictConfig(json.load('logging.json'))
 
 class AmiRepository(threading.Thread):
     def __init__(self):
@@ -52,19 +51,18 @@ class AmiRepository(threading.Thread):
                 worker, reservation = aws.start_machine(job[0], job[1])
                 if worker:
                     job[2] = 'requested'
-                    self.client.set(worker, pickle.dumps(job_id, reservation, None, 'requested', datetime.now()))
+                    self.client.set(worker, pickle.dumps([job_id, reservation, None, 'requested', datetime.now()]))
                 else:
-                    job[3] = 'ami request failed'
+                    job[2] = 'ami request failed'
                 self.client.set(job_id, pickle.dumps(job))
                 self.client.publish('jobs', job_id)
         else:
-            for key in self.client.keys('jm-*'):
-                worker = pickle.loads(self.client.get(key))
-                if worker[0] == job_id and worker[3] != 'terminate failed':
-                    if worker[2] is not None:
-                        result = aws.terminate_machine(worker[2])
+            for worker in self.client.keys('jm-*'):
+                worker_state = pickle.loads(self.client.get(worker))
+                if worker_state[0] == job_id and worker_state[2] is not None and worker_state[3] != 'terminate failed':
+                    result = aws.terminate_machine(worker_state[2])
                     if result is not None:
-                        self.client.delete(key)
+                        self.client.delete(worker)
                     else:
-                        worker[3] = 'terminate failed'
-                        self.client.set(key, pickle.dumps(worker))
+                        worker_state[3] = 'terminate failed'
+                        self.client.set(worker, pickle.dumps(worker_state))

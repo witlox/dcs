@@ -18,19 +18,18 @@ class JobMidwife:
         self.timer.start()
 
     def check_newborn(self):
-        try:
-            for key in self.client.keys('job-*'):
+        for key in self.client.keys('job-*'):
+            try:
                 job = pickle.loads(self.client.get(key))
-                if job[2] == 'booted' and job[3] == 'uploaded':
+                if job[2] == 'uploaded':
                     ramon = open('ramon.py', 'r').readall().\
-                        replace('[wjc]', self.settings.wjc).\
+                        replace('[web]', self.settings.web).\
                         replace('[elk]', self.settings.elk).\
-                        replace('[store]', self.settings.store).\
                         replace('[uuid]', key)
                     ssh = paramiko.SSHClient()
                     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
                     # fish ami
-                    r = requests.get('http://%s:6000/ami/%s' % (self.settings.ilm, job[0]))
+                    r = requests.get('http://%s/ilm/ami/%s' % (self.settings.web, job[0]))
                     rt = json.loads(r.data)
                     rtup = pickle.loads(rt)
                     with open('%s.pem' % key, 'wb') as hairy:
@@ -43,5 +42,5 @@ class JobMidwife:
                     shell = ssh.invoke_shell()
                     shell.send()
                     shell.send("nohup ./%s.sh > /dev/null 2>&1 &\n" % key)
-        except Exception:
-            logging.exception('not goig to break our midwife')
+            except Exception:
+                logging.exception('not goig to break our midwife')

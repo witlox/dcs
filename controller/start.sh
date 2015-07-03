@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+# if containers are running on different machines, use --add-host="name:ip" to redirect (ex: elk:x.x.x.x)
 # first pull the required containers
 docker pull nginx
 docker pull redis

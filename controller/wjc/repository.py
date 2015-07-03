@@ -1,14 +1,14 @@
+import json
+from logging.config import dictConfig
 import pickle
 import logging
 import uuid
 import redis
 
-from settings import Settings
-
+dictConfig(json.load('logging.json'))
 
 class JobRepository:
     def __init__(self):
-        Settings('WJC-Jobs')
         try:
             self.client = redis.Redis('db')
         except Exception, e:
@@ -20,7 +20,7 @@ class JobRepository:
 
     def insert_job(self, ami, instance_type):
         job_id = 'job-%s' % uuid.uuid4()
-        self.client.set(job_id, pickle.dumps([ami, instance_type, 'received', 'not_uploaded']))
+        self.client.set(job_id, pickle.dumps([ami, instance_type, 'received']))
         self.client.publish('jobs', job_id)
         return job_id
 

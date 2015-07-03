@@ -21,7 +21,7 @@ logging_config = {
                     'ls': {'class': 'logstash.TCPLogstashHandler',
                            'formatter': 'logstash',
                            'level': 'info',
-                           'host': [elk],
+                           'host': '[elk]',
                            'port': 9300,
                            'version': 1}
                 },
@@ -35,19 +35,19 @@ dictConfig(logging_config)
 
 try:
     # go get our stuff
+    r = requests.post('http://[web]/wjc/jobs/[uuid]/state/downloading')
     logging.info('downloading')
-    r = requests.post('http://[wjc]/jobs/[uuid]/state/downloading')
-    r = requests.get('http://[store]/[uuid].zip')
+    r = requests.get('http://[web]/store/[uuid].zip')
     if r.status_code != 200:
         raise Exception('could not download [uuid].zip')
     with open('./[uuid].zip', 'wb') as f:
         f.write(r.content)
     # unzip the file
-    r = requests.post('http://[wjc]/jobs/[uuid]/state/extracting')
+    r = requests.post('http://[web]/wjc/jobs/[uuid]/state/extracting')
     with zipfile.ZipFile('[uuid].zip') as zf:
         zf.extractall()
     # start the 'run' script
-    r = requests.post('http://[wjc]/jobs/[uuid]/state/running')
+    r = requests.post('http://[web]/wjc/jobs/[uuid]/state/running')
     output_filename = 'output.log'
     error_filename = 'output.log'
     # mwahahaha, buffer outputs and write them to loggers during execution (non blocking)
@@ -69,24 +69,24 @@ try:
         if error_line is not None and len(error_line) > 0:
             logging.error(error_line)
     # zip the results
-    r = requests.post('http://[wjc]/jobs/[uuid]/state/compressing')
+    r = requests.post('http://[web]/wjc/jobs/[uuid]/state/compressing')
     os.remove('./[uuid].zip')
     with zipfile.ZipFile('[uuid].zip', mode='w') as zf:
         for root, dirs, files in os.walk('.'):
             for file in files:
                 zf.write(os.path.join(root, file))
     # upload the results
-    r = requests.post('http://[wjc]/jobs/[uuid]/state/uploading')
+    r = requests.post('http://[web]/wjc/jobs/[uuid]/state/uploading')
     # remove old file on store
-    r = requests.delete('http://[store]/[uuid].zip')
+    r = requests.delete('http://[web]/store/[uuid].zip')
     with open('./[uuid].zip', 'rb') as data:
         headers = {'Content-Type': 'application/octet-stream'}
-        r = requests.post('http://[store]/[uuid].zip', data=data, headers=headers)
+        r = requests.post('http://[web]/store/[uuid].zip', data=data, headers=headers)
         if r.status_code != 200:
             raise Exception('could not upload results')
     # finished
-    r = requests.post('http://[wjc]/jobs/[uuid]/state/finished')
+    r = requests.post('http://[web]/wjc/jobs/[uuid]/state/finished')
     logging.info('job [uuid] done')
 except Exception:
     logging.exception('Failed to complete work')
-    r = requests.post('http://[wjc]/jobs/[uuid]/state/failed')
+    r = requests.post('http://[web]/wjc/jobs/[uuid]/state/failed')

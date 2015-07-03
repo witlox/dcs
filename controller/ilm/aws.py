@@ -1,12 +1,17 @@
 import base64
+import json
 import logging
+from logging.config import dictConfig
 import uuid
 import boto
 from settings import Settings
 
+# currently only 1 machine per reservation
+
+dictConfig(json.load('logging.json'))
+
 settings = Settings()
 
-# only 1 machine per reservation
 def start_machine(ami, instance):
     ec2 = boto.ec2.connect_to_region(settings.aws_region,
                                      aws_access_key_id=settings.aws_access,
@@ -32,7 +37,6 @@ def start_machine(ami, instance):
         logging.exception('Cannot reserve instance')
         return None
 
-# only 1 machine per reservation
 def terminate_machine(instance_id):
     ec2 = boto.ec2.connect_to_region(settings.aws_region,
                                      aws_access_key_id=settings.aws_access,
@@ -49,7 +53,6 @@ def terminate_machine(instance_id):
         logging.exception('Cannot terminate instance %s' % instance_id)
         return None
 
-# only 1 machine per reservation
 def my_booted_machine(reservation_id):
     ec2 = boto.ec2.connect_to_region(settings.aws_region,
                                      aws_access_key_id=settings.aws_access,
