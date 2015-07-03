@@ -9,7 +9,7 @@ install:
   - "pip install -r controller/ilm/requirements.txt"
   - "pip install -r controller/wjc/requirements.txt"
 # run all tests
-script: nosetests tests
+script: nosetests controller/tests
 # trigger docker builds
 after_success:
   - curl --data "build=true" -X POST https://registry.hub.docker.com/u/witlox/ilm/trigger/ba77f194-4e9f-4b94-bb23-ed84a236e6ec/
