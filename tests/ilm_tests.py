@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+import os
 import pickle
 import unittest
 import mock
@@ -7,7 +8,7 @@ import mock
 # don't want to create packages
 import sys
 
-sys.path.append('../controller/ilm')
+sys.path.append(os.path.abspath(os.path.join(os.path.split(__file__)[0] , '../controller/ilm')))
 
 
 class TestIlm(unittest.TestCase):
