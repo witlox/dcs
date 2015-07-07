@@ -8,7 +8,7 @@ docker pull pblittle/docker-logstash
 docker pull witlox/store
 docker pull witlox/ilm
 docker pull witlox/wjc
-# start the database backend (runs on port 27017, mount a local volume that will store database)
+# start the database backend (runs on port 6379, mount a local volume that will store database)
 docker run --name db -v /tmp/data:/data -d redis
 # start the file store (mount a local volume that will store the intermediate files)
 docker run --name store -v /tmp/store:/tmp/store -d witlox/store
