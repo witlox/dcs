@@ -1,13 +1,5 @@
 #!/usr/bin/env bash
 # if containers are running on different machines, use --add-host="name:ip" to redirect (ex: elk:x.x.x.x)
-# first pull the required containers
-docker pull nginx
-docker pull redis
-docker pull pblittle/docker-logstash
-# second pull our own containers
-docker pull witlox/store
-docker pull witlox/ilm
-docker pull witlox/wjc
 # start the database backend (runs on port 6379, mount a local volume that will store database)
 docker run --name db -v /tmp/data:/data -d redis
 # start the file store (mount a local volume that will store the intermediate files)
