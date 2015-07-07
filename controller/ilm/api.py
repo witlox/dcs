@@ -20,14 +20,12 @@ def __get_ami__(name):
     return Response(dumps(repository.get_ami(name)), mimetype='application/json')
 
 def __add_amis__(request):
-    logging.debug('received new ami request')
     data = request.get_json(force=True)
     repository = app.config['REPOSITORY']
     aid = repository.insert_ami(data['name'], data['username'], data['private_key'])
     return Response(dumps(aid), mimetype='application/json')
 
 def __remove_amis__(name):
-    logging.debug('received remove ami request')
     repository = app.config['REPOSITORY']
     res = repository.delete_ami(name)
     if res:
