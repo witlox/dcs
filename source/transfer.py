@@ -23,7 +23,7 @@ if args['action'] == 'upload':
         raise Exception('File does not exist ' + args['path'])
     with open(args['path'], 'rb') as data:
         headers = {'Content-Type': 'application/octet-stream'}
-        r = requests.post('http://%s/store/%s' % (args['server'], file_name), data=data, headers=headers)
+        r = requests.post('http://%s/store/%s' % (args['server'], file_name), data=data.read(), headers=headers)
         if r.status_code != 200:
             raise Exception('Status code not 200, %s' % r.content)
         r = requests.post('http://%s/wjc/jobs/%s/status/uploaded' % (args['server'], args['job_code']))

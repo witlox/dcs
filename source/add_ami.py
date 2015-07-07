@@ -17,7 +17,7 @@ args = args.__dict__
 if not os.path.exists(args['private_key']):
     raise Exception('Private key does not exist ' + args['private_key'])
 with open(args['private_key'], 'rb') as pk:
-    data = json.dumps({'name': args['ami'], 'username': args['username'], 'private_key': pk})
+    data = json.dumps({'name': args['ami'], 'username': args['username'], 'private_key': pk.read()})
     headers = {'Content-Type': 'application/json'}
     r = requests.post('http://%s/ilm/amis' % args['server'], data=data, headers=headers)
     if r.status_code != 200:

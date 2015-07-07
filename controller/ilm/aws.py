@@ -34,7 +34,7 @@ def start_machine(ami, instance):
         logging.info('Reservation %s for worker %s', reservation.id, worker_id)
         return worker_id, reservation.id
     except Exception:
-        logging.exception('Cannot reserve instance')
+        logging.exception('Cannot reserve instance %s for type %s' % (ami, instance))
         return None
 
 def terminate_machine(instance_id):
@@ -67,5 +67,5 @@ def my_booted_machine(reservation_id):
         if len(reservation) > 0 and len(reservation[0].instances) > 0:
             return reservation[0].instances[0].id, reservation[0].instances[0].ip_address
     except Exception:
-        logging.exception('Could not get reservations')
+        logging.exception('Could not get reservations for %s' % reservation_id)
     return None, None

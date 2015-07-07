@@ -29,9 +29,11 @@ class AmiRepository(threading.Thread):
         return pickle.dumps(self.client.get(name))
 
     def insert_ami(self, ami, username, private_key):
+        logging.info('registering new AMI %s with user %s' % (ami, username))
         return self.client.set(ami, pickle.dumps([username, private_key]))
 
     def delete_ami(self, ami):
+        logging.info('removing AMI %s' % ami)
         return self.client.delete(ami)
 
     def run(self):

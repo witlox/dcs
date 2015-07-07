@@ -4,23 +4,23 @@ from flask_autodoc import Autodoc
 
 from repository import JobRepository
 
-api = Flask(__name__)
-auto = Autodoc(api)
+app = Flask(__name__)
+auto = Autodoc(app)
 
-api.config['REPOSITORY'] = JobRepository()
+app.config['REPOSITORY'] = JobRepository()
 
 def __get_jobs__():
-    repository = api.config['REPOSITORY']
+    repository = app.config['REPOSITORY']
     return Response(dumps(repository.get_all_jobs()), mimetype='application/json')
 
 def __add_jobs__(data):
     jdata = data.get_json(force=True)
-    repository = api.config['REPOSITORY']
+    repository = app.config['REPOSITORY']
     aid = repository.insert_job(jdata['ami'], jdata['instance_type'])
     return Response(dumps(aid), mimetype='application/json')
 
 def __remove_jobs__(name):
-    repository = api.config['REPOSITORY']
+    repository = app.config['REPOSITORY']
     res = repository.delete_job(name)
     if res:
         return Response(dumps(res), mimetype='application/json')
@@ -28,27 +28,27 @@ def __remove_jobs__(name):
         raise ApplicationException('Could not delete %s' % name)
 
 def __get_job_state__(name):
-    repository = api.config['REPOSITORY']
+    repository = app.config['REPOSITORY']
     return repository.get_job_state(name)
 
 def __set_job_state__(name, state):
-    repository = api.config['REPOSITORY']
+    repository = app.config['REPOSITORY']
     return repository.set_job_state(name, state)
 
 # actual api :P
 
-@api.route("/")
+@app.route("/")
 def documentation():
     return auto.html()
 
-@api.route('/jobs', methods=['GET'])
+@app.route('/jobs', methods=['GET'])
 @auto.doc()
 def get_jobs():
     """ list currently registered jobs """
     return __get_jobs__()
 
 
-@api.route('/jobs', methods=['POST'])
+@app.route('/jobs', methods=['POST'])
 @auto.doc()
 def add_jobs():
     """
@@ -57,19 +57,19 @@ def add_jobs():
     """
     return __add_jobs__(request)
 
-@api.route('/jobs/<name>', methods=['DELETE'])
+@app.route('/jobs/<name>', methods=['DELETE'])
 @auto.doc()
 def remove_jobs(name):
     """ remove a job """
     return __remove_jobs__(name)
 
-@api.route('/jobs/<name>/state', methods=['GET'])
+@app.route('/jobs/<name>/state', methods=['GET'])
 @auto.doc()
 def get_state(name):
     """ get job state """
     return __get_job_state__(name)
 
-@api.route('/jobs/<name>/state/<state>', methods=['POST'])
+@app.route('/jobs/<name>/state/<state>', methods=['POST'])
 @auto.doc()
 def set_state(name, state):
     """ set job state """
@@ -91,7 +91,7 @@ class ApplicationException(Exception):
         rv['message'] = self.message
         return rv
 
-@api.errorhandler(ApplicationException)
+@app.errorhandler(ApplicationException)
 def handle_application_exception(error):
     response = jsonify(error.to_dict())
     response.status_code = error.status_code
