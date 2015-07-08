@@ -8,7 +8,8 @@ from settings import Settings
 
 # currently only 1 machine per reservation
 
-dictConfig(json.loads('logging.json'))
+with open('logging.json') as jl:
+    dictConfig(json.load(jl))
 
 settings = Settings()
 

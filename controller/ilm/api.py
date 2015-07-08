@@ -1,6 +1,4 @@
-import logging
 from flask import Flask, request, jsonify, Response
-
 from flask.json import dumps
 from flask_autodoc import Autodoc
 
