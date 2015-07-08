@@ -14,6 +14,8 @@ with open('logging.json') as jl:
 class AmiRepository(threading.Thread):
     def __init__(self):
         try:
+            threading.Thread.__init__(self)
+            self.daemon = True
             self.client = redis.Redis('db')
             self.pubsub = self.client.pubsub()
             self.pubsub.subscribe(['jobs'])
