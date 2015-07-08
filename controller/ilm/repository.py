@@ -8,7 +8,7 @@ import aws
 from logging.config import dictConfig
 from machine_midwife import MachineMidwife
 
-dictConfig(json.load('logging.json'))
+dictConfig(json.loads('logging.json'))
 
 class AmiRepository(threading.Thread):
     def __init__(self):

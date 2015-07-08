@@ -3,7 +3,7 @@ import json
 from logging.config import dictConfig, logging
 import os
 
-dictConfig(json.load('logging.json'))
+dictConfig(json.loads('logging.json'))
 
 class Settings:
 

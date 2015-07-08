@@ -5,7 +5,7 @@ import logging
 import uuid
 import redis
 
-dictConfig(json.load('logging.json'))
+dictConfig(json.loads('logging.json'))
 
 class JobRepository:
     def __init__(self):
