@@ -1,4 +1,4 @@
-flask-swagger
+flask-autodoc
 redis
 mock
 Werkzeug

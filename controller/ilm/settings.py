@@ -9,7 +9,7 @@ with open('logging.json') as jl:
 class Settings:
 
     def __init__(self):
-        if not os.exists('ilm.conf'):
+        if not os.path.exists('ilm.conf'):
             logging.error('we need a valid config, none found!')
             raise
         parser = ConfigParser()
