@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 import os
 import pickle
+import shutil
 import unittest
 import mock
 
@@ -13,6 +14,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.split(__file__)[0] , '../co
 
 class TestIlm(unittest.TestCase):
     def setUp(self):
+        if os.getcwd() != os.path.split(os.path.abspath(__file__))[0]:
+            shutil.copy(os.path.join(os.path.split(os.path.abspath(__file__))[0], 'logging.json'), 'logging.json')
         self.aws_mock = mock.MagicMock()
         modules = {
             'aws': self.aws_mock,
