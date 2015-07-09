@@ -3,7 +3,7 @@ import json
 import logging
 from logging.config import dictConfig
 import uuid
-import boto
+import boto.ec2
 from settings import Settings
 
 # currently only 1 machine per reservation
