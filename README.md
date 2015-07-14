@@ -14,7 +14,21 @@ This service consist of 2 working parts;
 
 Part 1 is meant to be run on Amazon, part 2 is meant to be run at your local site (where you have the input data for your simulation and where the result ends up).
 
-To start the system, simply run the start.sh in the controller directory on (a) Amazon machine(s) with the desired specification(s). The internal mechanics are explained in the readme in the controller directory.
+To start the system:
+- Launch an Amazon image (basic Amazon Linux instance is sufficient)
+- sudo yum update -y
+- sudo yum install -y docker
+- sudo yum install -y git
+- sudo service docker start
+- sudo usermod -a -G docker ec2-user
+- LOG OUT AND LOG IN AGAIN
+- git clone https://github.com/witlox/dcs
+- cd contoller
+- edit the ilm.conf and wjc.conf to represent your environment
+- run update.sh to get the latest images
+- and then simply run the start.sh
+
+The internal mechanics are explained in the readme in the controller directory.
 
 As a user, you will need to download the source directory to your local machine. The usage of the scripts are explained in the readme in the source directory.
 
