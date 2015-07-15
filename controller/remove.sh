@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-docker pull elasticsearch
-docker pull logstash
-docker pull kibana
+docker rm elasticsearch
+docker rm logstash
+docker rm kibana
 docker rm web
 docker rm store
 docker rm ilm
