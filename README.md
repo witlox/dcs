@@ -25,6 +25,7 @@ To start the system:
 - git clone https://github.com/witlox/dcs
 - cd contoller
 - edit the ilm.conf and wjc.conf to represent your environment
+- create the mount point for storage and database
 - run update.sh to get the latest images
 - and then simply run the start.sh
 
