@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
-# if containers are running on different machines, use --add-host="name:ip" to redirect (ex: elk:x.x.x.x)
+# first pull generic containers
 docker pull nginx
 docker pull redis
-docker pull pblittle/docker-logstash
+docker pull elasticsearch
+docker pull logstash
+docker pull kibana
 # second pull our own containers
 docker pull witlox/store
 docker pull witlox/ilm

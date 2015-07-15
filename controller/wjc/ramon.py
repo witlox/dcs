@@ -18,11 +18,11 @@ logging_config = {
                 'handlers': {
                     'fh': {'class': 'logging.StreamHandler',
                            'formatter': 'standard',
-                           'level': 'debug',
+                           'level': 'DEBUG',
                            'stream': 'ext://sys.stdout'},
                     'ls': {'class': 'logstash.TCPLogstashHandler',
                            'formatter': 'logstash',
-                           'level': 'info',
+                           'level': 'INFO',
                            'host': '[elk]',
                            'port': 9300,
                            'version': 1}

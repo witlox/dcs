@@ -3,11 +3,11 @@
     "disable_existing_loggers": "False",
     "formatters": {
         "standard": {
-          "format": "[ILM]-%(asctime)s[%(levelname)s](%(name)s):%(message)s",
+          "format": "[WJC]-%(asctime)s[%(levelname)s](%(name)s):%(message)s",
           "datefmt": "%Y-%m-%d %H:%M:%S"
         },
         "logstash": {
-          "format": "[ILM]-[%(levelname)s] %(message)s"
+          "format": "[WJC]-[%(levelname)s] %(message)s"
         }
     },
     "handlers": {
@@ -21,8 +21,8 @@
           "class": "logstash.TCPLogstashHandler",
           "formatter": "logstash",
           "level": "INFO",
-          "host": "elk",
-          "port": 9300,
+          "host": "logstash",
+          "port": 5000,
           "version": 1
         }
     },

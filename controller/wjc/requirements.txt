@@ -1,11 +1,6 @@
 flask-autodoc
 redis
-mock
-Werkzeug
-Jinja2
-itsdangerous
 flask
 requests
-nose
 python-logstash
 paramiko
