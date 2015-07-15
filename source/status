@@ -1,5 +1,6 @@
+#!/usr/bin/env python
+
 import argparse
-import json
 import requests
 
 parser = argparse.ArgumentParser(description='get job status from wjc')
@@ -12,5 +13,5 @@ args = parser.parse_args()
 
 args = args.__dict__
 
-r = requests.post('http://%s/wjc/jobs/%s/state' % (args['server'], args['job_code']))
+r = requests.get('http://%s/wjc/jobs/%s/state' % (args['server'], args['job_code']))
 print 'your job status is: %s' % r.content

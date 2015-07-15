@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 docker rm elk
 docker rm web
 docker rm store

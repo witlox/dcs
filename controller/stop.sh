@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 docker stop elk
 docker stop web
 docker stop store

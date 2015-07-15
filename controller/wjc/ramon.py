@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import io
 import os
 import requests
@@ -49,7 +51,7 @@ try:
     # start the 'run' script
     r = requests.post('http://[web]/wjc/jobs/[uuid]/state/running')
     output_filename = 'output.log'
-    error_filename = 'output.log'
+    error_filename = 'error.log'
     # mwahahaha, buffer outputs and write them to loggers during execution (non blocking)
     with io.open(output_filename, 'wb') as output_writer, io.open(output_filename, 'rb', 1) as output_reader, \
             io.open(error_filename, 'wb') as error_writer, io.open(error_filename, 'rb', 1) as error_reader:
