@@ -36,22 +36,24 @@ class TestIlm(unittest.TestCase):
         self.aws_mock.start_machine.return_value = 'jm-', 'res0'
 
         from repository import AmiRepository
+        from worker import Worker
+        from job import Job
 
         repository = AmiRepository()
         repository.client = mock.MagicMock()
         repository.client.exists.return_value = True
-        repository.client.get.return_value = pickle.dumps([None, None, 'received'])
+        job = Job('received')
+        repository.client.get.return_value = pickle.dumps(job)
         repository.client.set = mock.MagicMock()
         repository.client.publish = mock.MagicMock()
         repository.job_changed('test')
 
         assert repository.client.exists.call_count == 1
         assert len(repository.client.set.call_args_list) == 2
-        assert repository.client.set.call_args_list[0][0][0] == 'jm-'
+        assert repository.client.set.call_args_list[0][0][0].reservation == 'res0'
         assert repository.client.set.call_args_list[1][0][0] == 'test'
         assert repository.client.publish.call_count == 1
-        assert pickle.loads(repository.client.set.call_args_list[0][0][1])[3] == 'requested'
-        assert pickle.loads(repository.client.set.call_args_list[1][0][1])[2] == 'requested'
+        assert pickle.loads(repository.client.set.call_args_list[1][0][1]).state == 'requested'
 
     @mock.patch('repository.AmiRepository.__init__', mock.Mock(return_value=None))
     def test_requestfailed_machine_state_flow_for_requested(self):
@@ -59,18 +61,21 @@ class TestIlm(unittest.TestCase):
         self.aws_mock.start_machine.return_value = None, None
 
         from repository import AmiRepository
+        from worker import Worker
+        from job import Job
 
         repository = AmiRepository()
         repository.client = mock.MagicMock()
         repository.client.exists.return_value = True
-        repository.client.get.return_value = pickle.dumps([None, None, 'received'])
+        job = Job('received')
+        repository.client.get.return_value = pickle.dumps(job)
         repository.client.set = mock.MagicMock()
         repository.client.publish = mock.MagicMock()
         repository.job_changed('test')
 
         assert repository.client.exists.call_count == 1
         assert len(repository.client.set.call_args_list) == 1
-        assert pickle.loads(repository.client.set.call_args_list[0][0][1])[2] == 'ami request failed'
+        assert pickle.loads(repository.client.set.call_args_list[0][0][1]).state == 'ami request failed'
         assert repository.client.publish.call_count == 1
 
     @mock.patch('repository.AmiRepository.__init__', mock.Mock(return_value=None))
@@ -79,12 +84,19 @@ class TestIlm(unittest.TestCase):
         self.aws_mock.terminate_machine.return_value = 'some'
 
         from repository import AmiRepository
+        from worker import Worker
+        from job import Job
 
         repository = AmiRepository()
         repository.client = mock.MagicMock()
         repository.client.exists.return_value = False
         repository.client.keys.return_value = ['jm-']
-        repository.client.get.return_value = pickle.dumps(['test', None, 'instance', 'somthing', None])
+        worker = Worker('test')
+        worker.reservation = 'reservation'
+        worker.instance = 'instance'
+        worker.request_time = datetime.now()
+        worker.ip_address = 'something'
+        repository.client.get.return_value = pickle.dumps(worker)
         repository.client.delete = mock.MagicMock()
         repository.job_changed('test')
 
@@ -95,37 +107,23 @@ class TestIlm(unittest.TestCase):
         assert repository.client.delete.call_args[0][0] == 'jm-'
 
     @mock.patch('repository.AmiRepository.__init__', mock.Mock(return_value=None))
-    def test_terminatefailed_machine_state_flow_for_delete(self):
-        self.aws_mock.terminate_machine = mock.MagicMock()
-        self.aws_mock.terminate_machine.return_value = None
-
-        from repository import AmiRepository
-
-        repository = AmiRepository()
-        repository.client = mock.MagicMock()
-        repository.client.exists.return_value = False
-        repository.client.keys.return_value = ['jm-']
-        repository.client.get.return_value = pickle.dumps(['test', None, 'instance', 'somthing', None])
-        repository.client.set = mock.MagicMock()
-        repository.job_changed('test')
-
-        assert repository.client.exists.call_count == 1
-        assert repository.client.keys.call_count == 1
-        assert repository.client.get.call_count == 1
-        assert repository.client.set.call_count == 1
-        assert pickle.loads(repository.client.set.call_args_list[0][0][1])[3] == 'terminate failed'
-
-    @mock.patch('repository.AmiRepository.__init__', mock.Mock(return_value=None))
     def test_invalidjobid_machine_state_flow_for_delete(self):
         self.aws_mock.terminate_machine = mock.MagicMock()
 
         from repository import AmiRepository
+        from worker import Worker
+        from job import Job
 
         repository = AmiRepository()
         repository.client = mock.MagicMock()
         repository.client.exists.return_value = False
         repository.client.keys.return_value = ['jm-']
-        repository.client.get.return_value = pickle.dumps(['test1', None, 'instance', 'somthing', None])
+        worker = Worker('test1')
+        worker.reservation = 'reservation'
+        worker.instance = 'instance'
+        worker.request_time = datetime.now()
+        worker.ip_address = 'something'
+        repository.client.get.return_value = pickle.dumps(worker)
         repository.client.set = mock.MagicMock()
         repository.job_changed('test')
 
@@ -139,11 +137,18 @@ class TestIlm(unittest.TestCase):
         self.aws_mock.my_booted_machine.return_value= 'instance', 'ip'
 
         from machine_midwife import MachineMidwife
+        from worker import Worker
+        from job import Job
 
         midwife = MachineMidwife()
         midwife.client = mock.MagicMock()
         midwife.client.keys.return_value = ['jm-']
-        midwife.client.get.side_effect = [pickle.dumps(['test1', 'some', None, 'requested', datetime.now()]), pickle.dumps([None, None, None])]
+        worker = Worker('jm-')
+        worker.reservation = 'reservation'
+        worker.instance = None
+        worker.request_time = datetime.now()
+        worker.ip_address = None
+        midwife.client.get.side_effect = [pickle.dumps(worker), pickle.dumps(Job('requested'))]
         midwife.client.set = mock.MagicMock()
         midwife.client.publish = mock.MagicMock()
 
@@ -154,19 +159,25 @@ class TestIlm(unittest.TestCase):
         assert midwife.client.set.call_count == 2
         assert midwife.client.publish.call_count == 1
         assert self.aws_mock.my_booted_machine.call_count == 1
-        assert pickle.loads(midwife.client.set.call_args_list[0][0][1])[3] == 'booted'
-        assert pickle.loads(midwife.client.set.call_args_list[1][0][1])[2] == 'booted'
+        assert pickle.loads(midwife.client.set.call_args_list[1][0][1]).state == 'booted'
 
     @mock.patch('machine_midwife.MachineMidwife.__init__', mock.Mock(return_value=None))
     def test_stale_machinemidwife_flow(self):
         self.aws_mock.my_booted_machine = mock.MagicMock()
 
         from machine_midwife import MachineMidwife
+        from worker import Worker
+        from job import Job
 
         midwife = MachineMidwife()
         midwife.client = mock.MagicMock()
         midwife.client.keys.return_value = ['jm-']
-        midwife.client.get.side_effect = [pickle.dumps(['test1', 'some', None, 'requested', datetime.now()-timedelta(hours=1, milliseconds=1)]), pickle.dumps([None, None, None])]
+        worker = Worker('jm-')
+        worker.reservation = 'reservation'
+        worker.instance = None
+        worker.request_time = datetime.now()-timedelta(hours=1, milliseconds=1)
+        worker.ip_address = None
+        midwife.client.get.side_effect = [pickle.dumps(worker), pickle.dumps(Job('requested'))]
         midwife.client.set = mock.MagicMock()
         midwife.client.publish = mock.MagicMock()
 
@@ -177,8 +188,7 @@ class TestIlm(unittest.TestCase):
         assert midwife.client.set.call_count == 2
         assert midwife.client.publish.call_count == 1
         assert self.aws_mock.my_booted_machine.call_count == 0
-        assert pickle.loads(midwife.client.set.call_args_list[0][0][1])[3] == 'request failed'
-        assert pickle.loads(midwife.client.set.call_args_list[1][0][1])[2] == 'boot failed'
+        assert pickle.loads(midwife.client.set.call_args_list[1][0][1]).state == 'boot failed'
 
 
 

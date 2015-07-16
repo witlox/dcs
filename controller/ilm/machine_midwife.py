@@ -26,13 +26,13 @@ class MachineMidwife:
                         self.client.set(worker.job_id, pickle.dumps(job))
                         self.client.publish('jobs', worker.job_id)
                         continue
-                    aws_instance, ip_address = aws.my_booted_machine(worker.reservation)
-                    if aws_instance is not None:
-                        logging.info('reservation %s booted to instance %s' % (worker.reservation, aws_instance))
-                        worker.ip_address = ip_address
-                        self.client.set(worker_id, pickle.dumps(worker))
-                        job.state = 'booted'
-                        self.client.set(worker.job_id, pickle.dumps(job))
-                        self.client.publish('jobs', worker.job_id)
+                aws_instance, ip_address = aws.my_booted_machine(worker.reservation)
+                if aws_instance is not None:
+                    logging.info('reservation %s booted to instance %s' % (worker.reservation, aws_instance))
+                    worker.ip_address = ip_address
+                    self.client.set(worker_id, pickle.dumps(worker))
+                    job.state = 'booted'
+                    self.client.set(worker.job_id, pickle.dumps(job))
+                    self.client.publish('jobs', worker.job_id)
             except Exception:
                 logging.exception('but not going to break our machine midwife')

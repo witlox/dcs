@@ -77,6 +77,6 @@ class AmiRepository(threading.Thread):
                 worker = pickle.loads(self.client.get(worker_id))
                 if worker.job_id == job_id and worker.instance is not None:
                     result = aws.terminate_machine(worker.instance)
-                    if result is not None:
+                    if result is None:
                         logging.error('Could not remove worker %s, remove manually!' % worker.instance)
                     self.client.delete(worker_id)
