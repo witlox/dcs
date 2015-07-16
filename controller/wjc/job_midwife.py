@@ -56,10 +56,10 @@ class JobMidwife(threading.Thread):
                     ami_req = 'http://%s/ilm/ami/%s' % (self.settings.web, job.ami)
                     logging.info('retrieving AMI settings from %s' % ami_req)
                     r = requests.get(ami_req)
-                    data = pickle.dumps(r.content)
+                    data = pickle.loads(json.loads(r.content))
                     username = data[0]
                     key_file = data[1]
-                    with open('%s.pem' % key, 'wb') as hairy:
+                    with open('%s.key' % key, 'wb') as hairy:
                         hairy.write(key_file)
                     # fish ip
                     logging.info('getting worker ip')
@@ -71,14 +71,19 @@ class JobMidwife(threading.Thread):
                     if ip is None:
                         raise Exception('Could not determine IP address for worker/job %s' % key)
                     logging.info('establishing connection to %s using user %s' % (ip, username))
-                    ssh.connect(hostname=ip, username=username, key_filename='%s.pem' % key)
+                    ssh.connect(hostname=ip, username=username, key_filename='%s.key' % key)
                     sftp = ssh.open_sftp()
                     sftp.put(fn, fn)
-                    logging.info('transferred script, calling remote start')
-                    shell = ssh.invoke_shell()
-                    shell.send()
-                    shell.send("nohup ./%s > /dev/null 2>&1 &\n" % fn)
+                    logging.info('transferred script, setting up env and calling remote start')
+                    ssh.exec_command('virtualenv venv')
+                    ssh.exec_command('source venv/bin/activate')
+                    ssh.exec_command('pip install python-logstash requests')
+                    ssh.exec_command('chmod +x %s' % fn)
+                    ssh.exec_command('nohup ./%s > /dev/null 2>&1 &\n' % fn)
+                    ssh.exec_command('deactivate')
                     ssh.close()
+                    os.remove('%s.key' % key)
+                    os.remove(fn)
                     logging.info('script should be running now, check kibana for messages')
             except Exception:
                 logging.exception('but not going to break our job midwife')

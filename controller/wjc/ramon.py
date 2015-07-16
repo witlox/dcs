@@ -3,6 +3,7 @@
 import io
 import os
 import requests
+import stat
 import subprocess
 import zipfile
 from logging.config import dictConfig, logging
@@ -48,6 +49,15 @@ try:
     r = requests.post('http://[web]/wjc/jobs/[uuid]/state/extracting')
     with zipfile.ZipFile('[uuid].zip') as zf:
         zf.extractall()
+    # reset permissions
+    for root, dirs, files in os.walk('.'):
+        for momo in dirs:
+            os.chown(os.path.join(root, momo), os.getuid(), os.getgid())
+        for momo in files:
+            os.chown(os.path.join(root, momo), os.getuid(), os.getgid())
+    # run chmod +x
+    st = os.stat('run')
+    os.chmod('run', st.st_mode | stat.S_IEXEC)
     # start the 'run' script
     r = requests.post('http://[web]/wjc/jobs/[uuid]/state/running')
     output_filename = 'output.log'
