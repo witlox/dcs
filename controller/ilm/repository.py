@@ -7,6 +7,7 @@ import redis
 import aws
 from logging.config import dictConfig
 from machine_midwife import MachineMidwife
+from worker import Worker
 
 with open('logging.json') as jl:
     dictConfig(json.load(jl))
@@ -39,6 +40,13 @@ class AmiRepository(threading.Thread):
         logging.info('removing AMI %s' % ami)
         return self.client.delete(ami)
 
+    def get_all_workers(self):
+        result = []
+        for key in self.client.keys('jm-*'):
+            worker = pickle.loads(self.client.get(key))
+            result.append([key, worker.job_id, worker.reservation, worker.instance, worker.request_time, worker.ip_address])
+        return result
+
     def run(self):
         for item in self.pubsub.listen():
             if item['data'] == 'KILL':
@@ -52,22 +60,23 @@ class AmiRepository(threading.Thread):
     def job_changed(self, job_id):
         if self.client.exists(job_id):
             job = pickle.loads(self.client.get(job_id))
-            if job[2] == 'received':
-                worker, reservation = aws.start_machine(job[0], job[1])
-                if worker:
-                    job[2] = 'requested'
-                    self.client.set(worker, pickle.dumps([job_id, reservation, None, 'requested', datetime.now()]))
+            if job.state == 'received':
+                worker_id, reservation = aws.start_machine(job.ami, job.instance_type)
+                if worker_id:
+                    job.state = 'requested'
+                    worker_id = Worker(job_id)
+                    worker_id.request_time = datetime.now()
+                    worker_id.reservation = reservation
+                    self.client.set(worker_id, pickle.dumps(worker_id))
                 else:
-                    job[2] = 'ami request failed'
+                    job.state = 'ami request failed'
                 self.client.set(job_id, pickle.dumps(job))
                 self.client.publish('jobs', job_id)
         else:
-            for worker in self.client.keys('jm-*'):
-                worker_state = pickle.loads(self.client.get(worker))
-                if worker_state[0] == job_id and worker_state[2] is not None and worker_state[3] != 'terminate failed':
-                    result = aws.terminate_machine(worker_state[2])
+            for worker_id in self.client.keys('jm-*'):
+                worker = pickle.loads(self.client.get(worker_id))
+                if worker.job_id == job_id and worker.instance is not None:
+                    result = aws.terminate_machine(worker.instance)
                     if result is not None:
-                        self.client.delete(worker)
-                    else:
-                        worker_state[3] = 'terminate failed'
-                        self.client.set(worker, pickle.dumps(worker_state))
+                        logging.error('Could not remove worker %s, remove manually!' % worker.instance)
+                    self.client.delete(worker_id)

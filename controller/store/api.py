@@ -1,6 +1,7 @@
+from json import dumps
 import os
 from flask_autodoc import Autodoc
-from flask import Flask, request, jsonify, make_response
+from flask import Flask, request, jsonify, make_response, Response
 
 app = Flask(__name__)
 auto = Autodoc(app)
@@ -40,8 +41,15 @@ def __deleter__(file_name):
     os.remove(path)
     return 'ok'
 
+def __get_all_files__():
+    root = app.config['settings']
+    if not root or not os.path.exists(root) or not os.path.isdir(root):
+        raise ApplicationException('Something wrong with our filesystem (%s)' % root)
+    return Response(dumps([f for f in os.listdir(root) if os.path.isfile(os.path.join(root, f))]), mimetype='application/json')
+
+
 # actual api here :P
-@app.route('/')
+@app.route('/', defaults={'path': ''})
 def documentation():
     return auto.html()
 
@@ -62,6 +70,12 @@ def download(file_name):
 def delete(file_name):
     """ delete a file from the store """
     return __deleter__(file_name)
+
+@app.route('/files/', methods=['GET'])
+@auto.doc()
+def list_files():
+    """ List all files in the store """
+    return __get_all_files__()
 
 
 # register error handlers

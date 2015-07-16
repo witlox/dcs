@@ -33,11 +33,11 @@ def __get_job_state__(name):
 
 def __set_job_state__(name, state):
     repository = app.config['REPOSITORY']
-    return repository.set_job_state(name, state)
+    return Response(dumps(repository.set_job_state(name, state)), mimetype='application/json')
 
 # actual api :P
 
-@app.route("/")
+@app.route('/', defaults={'path': ''})
 def documentation():
     return auto.html()
 

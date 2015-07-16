@@ -21,7 +21,7 @@ class JobMidwife:
         for key in self.client.keys('job-*'):
             try:
                 job = pickle.loads(self.client.get(key))
-                if job[2] == 'uploaded':
+                if job.state == 'uploaded':
                     ramon = open('ramon.py', 'r').readall().\
                         replace('[web]', self.settings.web).\
                         replace('[elk]', self.settings.elk).\
@@ -29,12 +29,20 @@ class JobMidwife:
                     ssh = paramiko.SSHClient()
                     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
                     # fish ami
-                    r = requests.get('http://%s/ilm/ami/%s' % (self.settings.web, job[0]))
+                    r = requests.get('http://%s/ilm/ami/%s' % (self.settings.web, job.ami))
                     rt = json.loads(r.data)
                     rtup = pickle.loads(rt)
                     with open('%s.pem' % key, 'wb') as hairy:
                         hairy.write(rtup[1])
-                    ssh.connect(hostname=job[4], username=rtup[0], key_filename='%s.pem' % key)
+                    # fish ip
+                    ip = None
+                    for worker_key in self.client.keys('jm-*'):
+                        worker = pickle.loads(self.client.get(worker_key))
+                        if worker.job_id == key:
+                            ip = worker.ip_address
+                    if ip is None:
+                        raise Exception('Could not determine IP address for worker/job %s' % key)
+                    ssh.connect(hostname=ip, username=rtup[0], key_filename='%s.pem' % key)
                     sftp = ssh.open_sftp()
                     with open('%s.sh' % key, 'w') as smooth:
                         smooth.writelines(ramon)
@@ -43,4 +51,4 @@ class JobMidwife:
                     shell.send()
                     shell.send("nohup ./%s.sh > /dev/null 2>&1 &\n" % key)
             except Exception:
-                logging.exception('not goig to break our midwife')
+                logging.exception('but not going to break our job midwife')

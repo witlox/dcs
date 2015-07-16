@@ -4,6 +4,7 @@ import pickle
 import logging
 import uuid
 import redis
+from job import Job
 
 with open('logging.json') as jl:
     dictConfig(json.load(jl))
@@ -17,11 +18,18 @@ class JobRepository:
             raise
 
     def get_all_jobs(self):
-        return self.client.keys('job-*')
+        result = []
+        for job_key in self.client.keys('job-*'):
+            job = pickle.loads(self.client.get(job_key))
+            result.append([job_key, job.state, job.ami, job.instance_type])
+        return result
 
     def insert_job(self, ami, instance_type):
         job_id = 'job-%s' % uuid.uuid4()
-        self.client.set(job_id, pickle.dumps([ami, instance_type, 'received']))
+        job = Job('received')
+        job.ami = ami
+        job.instance_type = instance_type
+        self.client.set(job_id, pickle.dumps(job))
         self.client.publish('jobs', job_id)
         return job_id
 
@@ -33,13 +41,14 @@ class JobRepository:
     def get_job_state(self, job_id):
         job = pickle.loads(self.client.get(job_id))
         if job is not None:
-            return job[2]
+            return job.state
         return 'job not found'
 
     def set_job_state(self, job_id, state):
         job = pickle.loads(self.client.get(job_id))
         if job is not None:
-            job[2] = state
+            job.state = state
             self.client.set(job_id, pickle.dumps(job))
             self.client.publish('jobs', job_id)
+            return 'ok'
         return 'job not found'

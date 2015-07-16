@@ -31,9 +31,13 @@ def __remove_amis__(name):
     else:
         raise ApplicationException('Could not delete %s' % name)
 
+def __get_all_workers__():
+    repository = app.config['REPOSITORY']
+    return Response(dumps(repository.get_all_workers()), mimetype='application/json')
+
 # actual api :P
 
-@app.route("/")
+@app.route('/', defaults={'path': ''})
 def documentation():
     return auto.html()
 
@@ -65,6 +69,13 @@ def add_amis():
 def remove_amis(name):
     """ unregister an AMI """
     return __remove_amis__(name)
+
+@app.route('/workers', methods=['GET'])
+@auto.doc()
+def get_workers():
+    """ list currently registered workers """
+    return __get_all_workers__()
+
 
 # register error handlers
 class ApplicationException(Exception):
