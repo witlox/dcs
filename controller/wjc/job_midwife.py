@@ -18,6 +18,7 @@ class JobMidwife:
         self.timer.start()
 
     def check_newborn(self):
+        logging.info('checking for job updates')
         for key in self.client.keys('job-*'):
             try:
                 job = pickle.loads(self.client.get(key))

@@ -24,7 +24,6 @@ class AmiRepository(threading.Thread):
             self.start()
         except Exception:
             logging.exception('Cannot connect with the database server')
-            raise
 
     def get_all_amis(self):
         return self.client.keys('ami*')

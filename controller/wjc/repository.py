@@ -15,9 +15,8 @@ class JobRepository:
         try:
             self.client = redis.Redis('db')
             self.midwife = JobMidwife(self.client)
-        except Exception, e:
-            logging.error("Cannot connect with the database server: " + e)
-            raise
+        except Exception:
+            logging.exception('Cannot connect with the database server')
 
     def get_all_jobs(self):
         result = []
