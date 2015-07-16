@@ -11,9 +11,9 @@ logging_config = {
                 'version': 1,
                 'disable_existing_loggers': False,
                 'formatters': {
-                    'standard': {'format': '[ILM]-%(asctime)s[%(levelname)s](%(name)s):%(message)s',
+                    'standard': {'format': '[ILM]-%(asctime)s[%(levelname)s]%(funcName)s:%(message)s',
                                  'datefmt': '%Y-%m-%d %H:%M:%S'},
-                    'logstash': {'format': '[ILM]-[%(levelname)s] %(message)s'}
+                    'logstash': {'format': '[%(levelname)s]%(funcName)s:%(message)s'}
                 },
                 'handlers': {
                     'fh': {'class': 'logging.StreamHandler',
