@@ -15,8 +15,7 @@ def __get_amis__():
 
 def __get_ami__(name):
     repository = app.config['REPOSITORY']
-    username, key = repository.get_ami(name)
-    return Response(dumps(username), data=dumps(key), mimetype='application/json')
+    return Response(dumps(repository.get_ami(name)), mimetype='application/json')
 
 def __add_amis__(request):
     data = request.get_json(force=True)
