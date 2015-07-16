@@ -24,7 +24,7 @@ logging_config = {
                            'formatter': 'logstash',
                            'level': 'INFO',
                            'host': '[elk]',
-                           'port': 9300,
+                           'port': 5000,
                            'version': 1}
                 },
                 'loggers': {
