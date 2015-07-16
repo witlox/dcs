@@ -4,6 +4,7 @@ import pickle
 import logging
 import uuid
 import redis
+from job_midwife import JobMidwife
 from job import Job
 
 with open('logging.json') as jl:
@@ -13,6 +14,7 @@ class JobRepository:
     def __init__(self):
         try:
             self.client = redis.Redis('db')
+            self.midwife = JobMidwife(self.client)
         except Exception, e:
             logging.error("Cannot connect with the database server: " + e)
             raise
