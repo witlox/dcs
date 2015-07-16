@@ -73,6 +73,7 @@ class AmiRepository(threading.Thread):
                 self.client.set(job_id, pickle.dumps(job))
                 self.client.publish('jobs', job_id)
         else:
+            logging.info('removing worker for job %s' % job_id)
             for worker_id in self.client.keys('jm-*'):
                 worker = pickle.loads(self.client.get(worker_id))
                 if worker.job_id == job_id and worker.instance is not None:
