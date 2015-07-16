@@ -50,7 +50,7 @@ class TestIlm(unittest.TestCase):
 
         assert repository.client.exists.call_count == 1
         assert len(repository.client.set.call_args_list) == 2
-        assert repository.client.set.call_args_list[0][0][0].reservation == 'res0'
+        assert repository.client.set.call_args_list[0][0][0] == 'jm-'
         assert repository.client.set.call_args_list[1][0][0] == 'test'
         assert repository.client.publish.call_count == 1
         assert pickle.loads(repository.client.set.call_args_list[1][0][1]).state == 'requested'
