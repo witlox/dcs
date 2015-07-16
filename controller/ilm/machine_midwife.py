@@ -1,16 +1,28 @@
 from datetime import datetime, timedelta
 import logging
+import threading
+from time import sleep
 import aws
 import pickle
 from threading import Timer
 
 
-class MachineMidwife:
+class MachineMidwife(threading.Thread):
     def __init__(self, client):
-        self.client = client
         logging.info('starting machine midwife crisis')
-        self.timer = Timer(60, self.check_newborn)
-        self.timer.start()
+        threading.Thread.__init__(self)
+        self.daemon = True
+        self.client = client
+        self.running = True
+
+    def halt(self):
+        self.running = False
+
+    def run(self):
+        while self.running:
+            self.check_newborn()
+            sleep(60)
+        logging.info('sending midwife home')
 
     def check_newborn(self):
         logging.info('checking for machine updates')

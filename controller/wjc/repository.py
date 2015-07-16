@@ -15,6 +15,7 @@ class JobRepository:
         try:
             self.client = redis.Redis('db')
             self.midwife = JobMidwife(self.client)
+            self.midwife.start()
         except Exception:
             logging.exception('Cannot connect with the database server')
 

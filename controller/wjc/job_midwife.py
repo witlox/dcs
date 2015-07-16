@@ -3,19 +3,31 @@ import logging
 import pickle
 import requests
 from threading import Timer
+import threading
+from time import sleep
 
 import paramiko
 
 from settings import Settings
 
 
-class JobMidwife:
+class JobMidwife(threading.Thread):
     def __init__(self, client):
+        logging.info('starting job midwife crisis')
+        threading.Thread.__init__(self)
+        self.daemon = True
         self.settings = Settings()
         self.client = client
-        logging.info('starting job midwife crisis')
-        self.timer = Timer(60, self.check_newborn)
-        self.timer.start()
+        self.running = True
+
+    def halt(self):
+        self.running = False
+
+    def run(self):
+        while self.running:
+            self.check_newborn()
+            sleep(60)
+        logging.info('sending midwife home')
 
     def check_newborn(self):
         logging.info('checking for job updates')

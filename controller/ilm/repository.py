@@ -21,6 +21,7 @@ class AmiRepository(threading.Thread):
             self.pubsub = self.client.pubsub()
             self.pubsub.subscribe(['jobs'])
             self.midwife = MachineMidwife(self.client)
+            self.midwife.start()
             self.start()
         except Exception:
             logging.exception('Cannot connect with the database server')
