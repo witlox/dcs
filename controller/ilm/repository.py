@@ -64,10 +64,10 @@ class AmiRepository(threading.Thread):
                 worker_id, reservation = aws.start_machine(job.ami, job.instance_type)
                 if worker_id:
                     job.state = 'requested'
-                    worker_id = Worker(job_id)
-                    worker_id.request_time = datetime.now()
-                    worker_id.reservation = reservation
-                    self.client.set(worker_id, pickle.dumps(worker_id))
+                    worker = Worker(job_id)
+                    worker.request_time = datetime.now()
+                    worker.reservation = reservation
+                    self.client.set(worker_id, pickle.dumps(worker))
                 else:
                     job.state = 'ami request failed'
                 self.client.set(job_id, pickle.dumps(job))
