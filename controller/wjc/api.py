@@ -29,7 +29,7 @@ def __remove_jobs__(name):
 
 def __get_job_state__(name):
     repository = app.config['REPOSITORY']
-    return repository.get_job_state(name)
+    return Response(dumps(repository.get_job_state(name)), mimetype='application/json')
 
 def __set_job_state__(name, new_state):
     repository = app.config['REPOSITORY']

@@ -56,7 +56,7 @@ class JobMidwife(threading.Thread):
                     ami_req = 'http://%s/ilm/ami/%s' % (self.settings.web, job.ami)
                     logging.info('retrieving AMI settings from %s' % ami_req)
                     r = requests.get(ami_req)
-                    username = json.loads(r)
+                    username = json.loads(r.content)
                     key_file = json.loads(r.data)
                     with open('%s.pem' % key, 'wb') as hairy:
                         hairy.write(key_file)
