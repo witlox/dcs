@@ -37,7 +37,7 @@ def __get_all_workers__():
 
 # actual api :P
 
-@app.route('/', defaults={'path': ''})
+@app.route('/')
 def documentation():
     return auto.html()
 

@@ -37,7 +37,7 @@ def __set_job_state__(name, state):
 
 # actual api :P
 
-@app.route('/', defaults={'path': ''})
+@app.route('/')
 def documentation():
     return auto.html()
 

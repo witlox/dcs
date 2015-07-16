@@ -49,7 +49,7 @@ def __get_all_files__():
 
 
 # actual api here :P
-@app.route('/', defaults={'path': ''})
+@app.route('/')
 def documentation():
     return auto.html()
 
