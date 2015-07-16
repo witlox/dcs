@@ -31,9 +31,9 @@ def __get_job_state__(name):
     repository = app.config['REPOSITORY']
     return repository.get_job_state(name)
 
-def __set_job_state__(name, state):
+def __set_job_state__(name, new_state):
     repository = app.config['REPOSITORY']
-    return Response(dumps(repository.set_job_state(name, state)), mimetype='application/json')
+    return Response(dumps(repository.set_job_state(name, new_state)), mimetype='application/json')
 
 # actual api :P
 
@@ -69,11 +69,11 @@ def get_state(name):
     """ get job state """
     return __get_job_state__(name)
 
-@app.route('/jobs/<name>/state/<state>', methods=['POST'])
+@app.route('/jobs/<name>/state/<new_state>', methods=['POST'])
 @auto.doc()
-def set_state(name, state):
+def set_state(name, new_state):
     """ set job state """
-    return __set_job_state__(name, state)
+    return __set_job_state__(name, new_state)
 
 # register error handlers
 class ApplicationException(Exception):

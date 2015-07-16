@@ -9,7 +9,6 @@ parser = argparse.ArgumentParser(description='transfer a zipped directory to the
 parser.add_argument('server', help='specifiy the webserver address')
 parser.add_argument('action', help='upload, download or delete the zip file')
 parser.add_argument('path', help='path for the file')
-parser.add_argument('job_code', help='job code from submit')
 
 args = parser.parse_args()
 
@@ -24,23 +23,31 @@ if args['action'] == 'upload':
     if not os.path.exists(args['path']):
         raise Exception('File does not exist ' + args['path'])
     with open(args['path'], 'rb') as data:
+        cstr = 'http://%s/store/%s' % (args['server'], file_name)
+        print 'calling %s' % cstr
         headers = {'Content-Type': 'application/octet-stream'}
-        r = requests.post('http://%s/store/%s' % (args['server'], file_name), data=data.read(), headers=headers)
+        r = requests.post(cstr, data=data.read(), headers=headers)
         if r.status_code != 200:
             raise Exception('Status code not 200, %s' % r.content)
-        r = requests.post('http://%s/wjc/jobs/%s/status/uploaded' % (args['server'], args['job_code']))
+        cstr = 'http://%s/wjc/jobs/%s/state/uploaded' % (args['server'], os.path.splitext(os.path.basename(args['path']))[0])
+        print 'calling %s' % cstr
+        r = requests.post(cstr)
         print 'upload done %s' % r
 elif args['action'] == 'download':
     if not os.path.exists(directory):
         raise Exception('Directory does not exist ' + directory)
-    r = requests.get('http://%s/store/%s' % (args['server'], file_name))
+    cstr = 'http://%s/store/%s' % (args['server'], file_name)
+    print 'calling %s' % cstr
+    r = requests.get(cstr)
     if r.status_code != 200:
         raise Exception('Status code not 200, %s' % r.content)
     with open(args['path'], 'wb') as f:
         f.write(r.content)
     print 'download done to %s' % args['path']
 elif args['action'] == 'delete':
-    r = requests.delete('http://%s/store/%s' % (args['server'], file_name))
+    cstr = 'http://%s/store/%s' % (args['server'], file_name)
+    print 'calling %s' % cstr
+    r = requests.delete(cstr)
     if r.status_code != 200:
         raise Exception('Status code not 200, %s' % r.content)
     print 'deleting done %s' % r
