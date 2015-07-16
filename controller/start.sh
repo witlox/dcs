@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# create folder mounts
+mkdir -p /tmp/data
+mkdir -p /tmp/store
 # if containers are running on different machines, use --add-host="name:ip" to redirect (ex: elk:x.x.x.x)
 # start the database backend (runs on port 6379, mount a local volume that will store database)
 docker run --name db -v /tmp/data:/data -d redis
