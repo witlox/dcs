@@ -1,7 +1,9 @@
 import json
 import logging
+import os
 import pickle
 import requests
+import stat
 from threading import Timer
 import threading
 from time import sleep
@@ -35,10 +37,12 @@ class JobMidwife(threading.Thread):
             try:
                 job = pickle.loads(self.client.get(key))
                 if job.state == 'uploaded':
-                    ramon = open('ramon.py', 'r').readall().\
-                        replace('[web]', self.settings.web).\
-                        replace('[elk]', self.settings.elk).\
-                        replace('[uuid]', key)
+                    ramon = None
+                    with open ("data.txt", "r") as r:
+                        ramon = r.read()
+                    ramon = ramon.replace('[web]', self.settings.web)
+                    ramon = ramon.replace('[elk]', self.settings.elk)
+                    ramon = ramon.replace('[uuid]', key)
                     ssh = paramiko.SSHClient()
                     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
                     # fish ami
@@ -57,11 +61,15 @@ class JobMidwife(threading.Thread):
                         raise Exception('Could not determine IP address for worker/job %s' % key)
                     ssh.connect(hostname=ip, username=rtup[0], key_filename='%s.pem' % key)
                     sftp = ssh.open_sftp()
-                    with open('%s.sh' % key, 'w') as smooth:
+                    fn = '%s.sh' % key
+                    with open(fn, 'w') as smooth:
                         smooth.writelines(ramon)
-                    sftp.put('%s.sh' % key, '%s.sh' % key)
+                    st = os.stat(fn)
+                    os.chmod(fn, st.st_mode | stat.S_IEXEC)
+                    sftp.put(fn, fn)
                     shell = ssh.invoke_shell()
                     shell.send()
-                    shell.send("nohup ./%s.sh > /dev/null 2>&1 &\n" % key)
+                    shell.send("nohup ./%s > /dev/null 2>&1 &\n" % fn)
+                    ssh.close()
             except Exception:
                 logging.exception('but not going to break our job midwife')
