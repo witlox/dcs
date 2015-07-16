@@ -8,7 +8,7 @@ with open('logging.json') as jl:
 
 class Settings:
 
-    def __init__(self, module_name):
+    def __init__(self):
         if not os.path.exists('wjc.conf'):
             logging.error('we need a valid config, none found!')
             raise
