@@ -30,7 +30,8 @@ class AmiRepository(threading.Thread):
         return self.client.keys('ami*')
 
     def get_ami(self, name):
-        return pickle.dumps(self.client.get(name))
+        ami_settings = pickle.dumps(self.client.get(name))
+        return ami_settings[0], ami_settings[1]
 
     def insert_ami(self, ami, username, private_key):
         logging.info('registering new AMI %s with user %s' % (ami, username))

@@ -56,10 +56,10 @@ class JobMidwife(threading.Thread):
                     ami_req = 'http://%s/ilm/ami/%s' % (self.settings.web, job.ami)
                     logging.info('retrieving AMI settings from %s' % ami_req)
                     r = requests.get(ami_req)
-                    rt = json.loads(r.data)
-                    rtup = pickle.loads(rt)
+                    username = json.loads(r)
+                    key_file = json.loads(r.data)
                     with open('%s.pem' % key, 'wb') as hairy:
-                        hairy.write(rtup[1])
+                        hairy.write(key_file)
                     # fish ip
                     logging.info('getting worker ip')
                     ip = None
@@ -69,8 +69,8 @@ class JobMidwife(threading.Thread):
                             ip = worker.ip_address
                     if ip is None:
                         raise Exception('Could not determine IP address for worker/job %s' % key)
-                    logging.info('establishing connection to %s using user %s' % (ip, rtup[0]))
-                    ssh.connect(hostname=ip, username=rtup[0], key_filename='%s.pem' % key)
+                    logging.info('establishing connection to %s using user %s' % (ip, username))
+                    ssh.connect(hostname=ip, username=username, key_filename='%s.pem' % key)
                     sftp = ssh.open_sftp()
                     sftp.put(fn, fn)
                     logging.info('transferred script, calling remote start')
