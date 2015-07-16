@@ -39,7 +39,7 @@ class JobMidwife(threading.Thread):
                 if job.state == 'uploaded':
                     logging.info('found job to transmit to worker %s, preparing script' % key)
                     ramon = None
-                    with open ("data.txt", "r") as r:
+                    with open('ramon.py', 'r') as r:
                         ramon = r.read()
                     ramon = ramon.replace('[web]', self.settings.web)
                     ramon = ramon.replace('[elk]', self.settings.elk)
