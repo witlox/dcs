@@ -45,9 +45,12 @@ class JobMidwife(threading.Thread):
                     if ip is None:
                         raise Exception('Could not determine IP address for worker/job %s' % key)
                     # check if state is ok
-                    ami_stat = 'http://%s/ilm/ami/%s' % (self.settings.web, worker.instance)
-                    if ami_stat.lower() != 'status:ok':
-                        logging.info('AMI (%s) status (%s) NOK, waiting...' % (worker.instance, ami_stat))
+                    ami_stat = 'http://%s/ilm/ami/%s/status' % (self.settings.web, worker.instance)
+                    r = requests.get(ami_stat)
+                    if r.status_code != 200:
+                        logging.error('Could not connect to %s!' % ami_stat)
+                    if r.content.lower() != 'status:ok':
+                        logging.info('AMI (%s) status (%s) NOK, waiting...' % (worker.instance, r.content))
                         continue
                     logging.info('found job to transmit to worker %s, preparing script' % key)
                     ramon = None
