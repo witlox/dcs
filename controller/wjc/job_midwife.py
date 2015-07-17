@@ -68,7 +68,7 @@ class JobMidwife(threading.Thread):
                         wrinkly.writelines('virtualenv venv\n'
                                            'source venv/bin/activate\n'
                                            'pip install python-logstash requests\n'
-                                           './%s' % (fn, fn))
+                                           './%s' % fn)
                     st_sn = os.stat(sn)
                     os.chmod(sn, st_sn.st_mode | stat.S_IEXEC)
                     logging.info('start script %s prepared' % sn)
