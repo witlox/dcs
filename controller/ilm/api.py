@@ -58,10 +58,10 @@ def get_ami(name):
     """ get requested AMI credentials """
     return __get_ami__(name)
 
-@app.route('/ami/<id>/status', methods=['GET'])
+@app.route('/ami/<aid>/status', methods=['GET'])
 @auto.doc()
 def get_ami_status(aid):
-    """ get requested running AMI (id) status """
+    """ get requested running AMI ID (aid) status """
     return __get_ami_status__(aid)
 
 
