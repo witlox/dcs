@@ -8,33 +8,32 @@ import subprocess
 import zipfile
 from logging.config import dictConfig, logging
 
-logging_config = {
-                'version': 1,
-                'disable_existing_loggers': False,
-                'formatters': {
-                    'standard': {'format': '[ILM]-%(asctime)s[%(levelname)s]%(funcName)s:%(message)s',
-                                 'datefmt': '%Y-%m-%d %H:%M:%S'},
-                    'logstash': {'format': '[%(levelname)s]%(funcName)s:%(message)s'}
-                },
-                'handlers': {
-                    'fh': {'class': 'logging.StreamHandler',
-                           'formatter': 'standard',
-                           'level': 'DEBUG',
-                           'stream': 'ext://sys.stdout'},
-                    'ls': {'class': 'logstash.TCPLogstashHandler',
-                           'formatter': 'logstash',
-                           'level': 'INFO',
-                           'host': '[elk]',
-                           'port': 5000,
-                           'version': 1}
-                },
-                'loggers': {
-                    '': {'handlers': ['fh', 'ls'],
-                         'level': 'DEBUG',
-                         'propagate': True}
-                }
-            }
-dictConfig(logging_config)
+dictConfig({
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'standard': {'format': '[ILM]-%(asctime)s[%(levelname)s]%(funcName)s:%(message)s',
+                     'datefmt': '%Y-%m-%d %H:%M:%S'},
+        'logstash': {'format': '[%(levelname)s][uuid]:%(message)s'}
+    },
+    'handlers': {
+        'fh': {'class': 'logging.StreamHandler',
+               'formatter': 'standard',
+               'level': 'DEBUG',
+               'stream': 'ext://sys.stdout'},
+        'ls': {'class': 'logstash.TCPLogstashHandler',
+               'formatter': 'logstash',
+               'level': 'INFO',
+               'host': '[elk]',
+               'port': 5000,
+               'version': 1}
+    },
+    'loggers': {
+        '': {'handlers': ['fh', 'ls'],
+             'level': 'DEBUG',
+             'propagate': True}
+    }
+})
 
 try:
     # go get our stuff

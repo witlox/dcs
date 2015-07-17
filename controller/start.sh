@@ -1,14 +1,13 @@
 #!/usr/bin/env bash
 # create folder mounts
-mkdir -p /tmp/data
 mkdir -p /tmp/store
 # if containers are running on different machines, use --add-host="name:ip" to redirect (ex: elk:x.x.x.x)
-# start the database backend (runs on port 6379, mount a local volume that will store database)
-docker run --name db -v /tmp/data:/data -d redis
+# start the database backend (runs on port 6379, mount a local volume that will store database snapshots if you want persistancy)
+docker run --name db -d redis
 # start the file store (mount a local volume that will store the intermediate files)
 docker run --name store -v /tmp/store:/tmp/store -d witlox/store
-# start the ELK stack (logstash on port 9200, kibana on port 9292, 9300 for worker logging)
-docker run -p 9200:9200 -p 9300:9300 --name elasticsearch -v /tmp/data:/usr/share/elasticsearch/data -d elasticsearch
+# start the ELK stack (logstash on port 9200, kibana on port 9292, 9300 for worker logging, mount a local volume that will store database snapshots if you want persistancy)
+docker run -p 9200:9200 -p 9300:9300 --name elasticsearch -d elasticsearch
 docker run -p 5000:5000 -it -d --name logstash --link elasticsearch:elasticsearch logstash logstash -e 'input { tcp { port => 5000 } } output { elasticsearch { host => elasticsearch } }'
 docker run -p 5601:5601 --name kibana --link elasticsearch:elasticsearch -d kibana
 # start uwsgi containers with overwritten config and mounted apps (ports 6000 & 7000)
