@@ -19,7 +19,10 @@ def __get_ami__(name):
     return Response(dumps(repository.get_ami(name)), mimetype='application/json')
 
 def __get_ami_status__(aid):
-    return Response(dumps(aws.get_status(aid)), mimetype='application/json')
+    status = aws.get_status(aid)
+    if status:
+        return Response(dumps(str(status)), mimetype='application/json')
+    raise ApplicationException('Could not get status for %s' % aid)
 
 def __add_amis__(wrequest):
     data = wrequest.get_json(force=True)
