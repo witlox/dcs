@@ -7,7 +7,7 @@
           "datefmt": "%Y-%m-%d %H:%M:%S"
         },
         "logstash": {
-          "format": "[%(levelname)s]%(funcName)s:%(message)s"
+          "format": "WJC - [%(levelname)s]%(funcName)s:%(message)s"
         }
     },
     "handlers": {

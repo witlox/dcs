@@ -46,11 +46,9 @@ class JobMidwife(threading.Thread):
                         raise Exception('Could not determine IP address for worker/job %s' % key)
                     # check if state is ok
                     ami_stat = 'http://%s/ilm/ami/%s/status' % (self.settings.web, worker.instance)
-                    r = requests.get(ami_stat)
-                    if r.status_code != 200:
-                        logging.error('Could not connect to %s!' % ami_stat)
-                    if r.content.lower() != 'status:ok':
-                        logging.info('AMI (%s) status (%s) NOK, waiting...' % (worker.instance, r.content))
+                    r_stat = requests.get(ami_stat)
+                    if 'status:ok' in r_stat.content.lower():
+                        logging.info('AMI (%s) status (%s) NOK, waiting...' % (worker.instance, r_stat.content))
                         continue
                     logging.info('found job to transmit to worker %s, preparing script' % key)
                     ramon = None
@@ -79,8 +77,8 @@ class JobMidwife(threading.Thread):
                     # fish ami
                     ami_req = 'http://%s/ilm/ami/%s' % (self.settings.web, job.ami)
                     logging.info('retrieving AMI settings from %s' % ami_req)
-                    r = requests.get(ami_req)
-                    data = pickle.loads(json.loads(r.content))
+                    r_ami = requests.get(ami_req)
+                    data = pickle.loads(json.loads(r_ami.content))
                     username = data[0]
                     key_file = data[1]
                     with open('%s.key' % key, 'wb') as hairy:
