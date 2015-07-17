@@ -62,16 +62,7 @@ class JobMidwife(threading.Thread):
                         smooth.writelines(ramon)
                     st_fn = os.stat(fn)
                     os.chmod(fn, st_fn.st_mode | stat.S_IEXEC)
-                    logging.info('wrapper script %s prepared' % fn)
-                    sn = 'start-%s.sh' % key
-                    with open(sn, 'w') as wrinkly:
-                        wrinkly.writelines(['virtualenv venv',
-                                            'source venv/bin/activate',
-                                            'pip install python-logstash requests',
-                                            'nohup ./%s &' % fn])
-                    st_sn = os.stat(sn)
-                    os.chmod(sn, st_sn.st_mode | stat.S_IEXEC)
-                    logging.info('start script %s prepared' % sn)
+                    logging.info('script %s prepared' % fn)
                     ssh = paramiko.SSHClient()
                     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
                     # fish ami
@@ -86,12 +77,12 @@ class JobMidwife(threading.Thread):
                     logging.info('establishing connection to %s using user %s' % (ip, username))
                     ssh.connect(hostname=ip, username=username, key_filename='%s.key' % key)
                     sftp = ssh.open_sftp()
-                    sftp.put(sn, sn)
                     sftp.put(fn, fn)
                     logging.info('transferred scripts, setting up env and calling remote start')
-                    ssh.exec_command('chmod +x %s' % sn)
-                    ssh.exec_command('chmod +x %s' % fn)
-                    _, out, err = ssh.exec_command('./%s &' % sn)
+                    _, out, err = ssh.exec_command('virtualenv venv && '
+                                                   'source venv/bin/activate && '
+                                                   'pip install python-logstash requests && '
+                                                   'nohup ./%s  > /dev/null 2>&1 &\n' % fn)
                     output = out.readlines()
                     error = err.readlines()
                     if output:
@@ -100,7 +91,6 @@ class JobMidwife(threading.Thread):
                         logging.error('%s error: %s' % (key, error))
                     ssh.close()
                     os.remove('%s.key' % key)
-                    os.remove(sn)
                     os.remove(fn)
                     logging.info('script should be running now, check kibana for messages')
             except Exception:

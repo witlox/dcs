@@ -48,7 +48,7 @@ def terminate_machine(instance_id):
         return None
     try:
         terminated = ec2.terminate_instances([instance_id])
-        logging.info('Succesfully terminated %d instances %s' % (len(terminated), ' '.join(terminated)))
+        logging.info('Succesfully terminated %d instances' % (len(terminated)))
         return terminated
     except Exception:
         logging.exception('Cannot terminate instance %s' % instance_id)
