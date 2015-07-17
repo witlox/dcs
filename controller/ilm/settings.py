@@ -18,3 +18,4 @@ class Settings:
         self.aws_secret = parser.get('aws', 'secret_key')
         self.aws_access = parser.get('aws', 'access_key')
         self.aws_seqgrp = parser.get('aws', 'security_group')
+        self.aws_auto_remove_failed = parser.getboolean('aws', 'auto_remove_failed')

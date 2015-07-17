@@ -80,6 +80,8 @@ class TestIlm(unittest.TestCase):
 
     @mock.patch('repository.AmiRepository.__init__', mock.Mock(return_value=None))
     def test_normal_machine_state_flow_for_delete(self):
+        self.aws_mock.check_running = mock.MagicMock()
+        self.aws_mock.check_running.return_value = True
         self.aws_mock.terminate_machine = mock.MagicMock()
         self.aws_mock.terminate_machine.return_value = 'some'
 
@@ -108,6 +110,8 @@ class TestIlm(unittest.TestCase):
 
     @mock.patch('repository.AmiRepository.__init__', mock.Mock(return_value=None))
     def test_invalidjobid_machine_state_flow_for_delete(self):
+        self.aws_mock.check_running = mock.MagicMock()
+        self.aws_mock.check_running.return_value = True
         self.aws_mock.terminate_machine = mock.MagicMock()
 
         from repository import AmiRepository
@@ -190,7 +194,61 @@ class TestIlm(unittest.TestCase):
         assert self.aws_mock.my_booted_machine.call_count == 0
         assert pickle.loads(midwife.client.set.call_args_list[1][0][1]).state == 'boot failed'
 
+    @mock.patch('machine_midwife.MachineMidwife.__init__', mock.Mock(return_value=None))
+    def test_machinemidwife_finished_flow(self):
+        self.aws_mock.terminate_machine = mock.MagicMock()
+        self.aws_mock.terminate_machine.return_value = 'some'
 
+        from machine_midwife import MachineMidwife
+        from worker import Worker
+        from job import Job
+
+        midwife = MachineMidwife()
+        midwife.client = mock.MagicMock()
+        midwife.client.keys.return_value = ['jm-']
+        worker = Worker('jm-')
+        worker.reservation = 'reservation'
+        worker.instance = 'instance'
+        worker.request_time = datetime.now()-timedelta(hours=1, milliseconds=1)
+        worker.ip_address = None
+        midwife.client.get.side_effect = [pickle.dumps(worker), pickle.dumps(Job('finished'))]
+        midwife.client.set = mock.MagicMock()
+        midwife.client.publish = mock.MagicMock()
+
+        midwife.check_newborn()
+
+        assert midwife.client.keys.call_count == 1
+        assert midwife.client.get.call_count == 2
+        assert self.aws_mock.terminate_machine.call_count == 1
+
+    @mock.patch('machine_midwife.MachineMidwife.__init__', mock.Mock(return_value=None))
+    def test_machinemidwife_failed_without_cleanup_flow(self):
+        self.aws_mock.terminate_machine = mock.MagicMock()
+        self.aws_mock.terminate_machine.return_value = 'some'
+
+        from machine_midwife import MachineMidwife
+        from worker import Worker
+        from job import Job
+
+        midwife = MachineMidwife()
+        midwife.settings = mock.MagicMock()
+        midwife.settings.aws_auto_remove_failed = False
+        midwife.client = mock.MagicMock()
+        midwife.client.keys.return_value = ['jm-']
+        worker = Worker('jm-')
+        worker.reservation = 'reservation'
+        worker.instance = 'instance'
+        worker.request_time = datetime.now()-timedelta(hours=1, milliseconds=1)
+        worker.ip_address = None
+        midwife.client.get.side_effect = [pickle.dumps(worker), pickle.dumps(Job('failed'))]
+        midwife.client.set = mock.MagicMock()
+        midwife.client.publish = mock.MagicMock()
+
+        midwife.check_newborn()
+
+        assert midwife.client.keys.call_count == 1
+        assert midwife.client.get.call_count == 2
+        assert self.aws_mock.terminate_machine.call_count == 0
 
 if __name__ == '__main__':
     unittest.main()

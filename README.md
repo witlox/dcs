@@ -15,7 +15,7 @@ This service consist of 2 working parts
 Part 1 is meant to be run on Amazon, part 2 is meant to be run at your local site (where you have the input data for your simulation and where the result ends up).
 
 To start the system:
-- check if your AWS firewall settings allow the forwarded ports (80/9200/9300, and SSH for the workers)
+- check if your AWS firewall settings allow the forwarded ports (80/5000/9200/9300, and SSH for the workers)
 - Launch an Amazon image (basic Amazon Linux instance is sufficient)
 - sudo yum update -y
 - sudo yum install -y docker
