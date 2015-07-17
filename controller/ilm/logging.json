@@ -7,7 +7,7 @@
           "datefmt": "%Y-%m-%d %H:%M:%S"
         },
         "logstash": {
-          "format": "ILM - [%(levelname)s]%(funcName)s:%(message)s"
+          "format": "ILM - [%(levelname)s] %(funcName)s:%(message)s"
         }
     },
     "handlers": {

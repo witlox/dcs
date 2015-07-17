@@ -47,7 +47,7 @@ class JobMidwife(threading.Thread):
                     # check if state is ok
                     ami_stat = 'http://%s/ilm/ami/%s/status' % (self.settings.web, worker.instance)
                     r_stat = requests.get(ami_stat)
-                    if 'status:ok' in r_stat.content.lower():
+                    if not 'status:ok' in r_stat.content.lower():
                         logging.info('AMI (%s) status (%s) NOK, waiting...' % (worker.instance, r_stat.content))
                         continue
                     logging.info('found job to transmit to worker %s, preparing script' % key)
