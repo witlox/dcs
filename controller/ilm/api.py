@@ -1,3 +1,4 @@
+import aws
 from flask import Flask, request, jsonify, Response
 from flask.json import dumps
 from flask_autodoc import Autodoc
@@ -17,8 +18,11 @@ def __get_ami__(name):
     repository = app.config['REPOSITORY']
     return Response(dumps(repository.get_ami(name)), mimetype='application/json')
 
-def __add_amis__(request):
-    data = request.get_json(force=True)
+def __get_ami_status__(aid):
+    return Response(dumps(aws.get_status(aid)), mimetype='application/json')
+
+def __add_amis__(wrequest):
+    data = wrequest.get_json(force=True)
     repository = app.config['REPOSITORY']
     aid = repository.insert_ami(data['name'], data['username'], data['private_key'])
     return Response(dumps(aid), mimetype='application/json')
@@ -53,6 +57,12 @@ def get_amis():
 def get_ami(name):
     """ get requested AMI credentials """
     return __get_ami__(name)
+
+@app.route('/ami/<id>/status', methods=['GET'])
+@auto.doc()
+def get_ami_status(aid):
+    """ get requested running AMI (id) status """
+    return __get_ami_status__(aid)
 
 
 @app.route('/amis', methods=['POST'])

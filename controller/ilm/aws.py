@@ -12,7 +12,6 @@ with open('logging.json') as jl:
     dictConfig(json.load(jl))
 
 settings = Settings()
-logger = logging.getLogger('aws')
 
 def start_machine(ami, instance):
     ec2 = boto.ec2.connect_to_region(settings.aws_region,
@@ -20,11 +19,11 @@ def start_machine(ami, instance):
                                      aws_secret_access_key=settings.aws_secret)
 
     if not ec2:
-        logger.error('Cannot connect to region %s' % settings.aws_region)
+        logging.error('Cannot connect to region %s' % settings.aws_region)
         return None
 
     worker_id = 'jm-%s' % uuid.uuid4()
-    logger.info('Request workerID = %s', worker_id)
+    logging.info('Request workerID = %s', worker_id)
     try:
         reservation = ec2.run_instances(
             ami,
@@ -33,10 +32,10 @@ def start_machine(ami, instance):
             user_data=base64.b64encode(worker_id),
             instance_initiated_shutdown_behavior='terminate',
         )
-        logger.info('Reservation %s for worker %s', reservation.id, worker_id)
+        logging.info('Reservation %s for worker %s', reservation.id, worker_id)
         return worker_id, reservation.id
     except Exception:
-        logger.exception('Cannot reserve instance %s for type %s' % (ami, instance))
+        logging.exception('Cannot reserve instance %s for type %s' % (ami, instance))
         return None
 
 def terminate_machine(instance_id):
@@ -45,14 +44,14 @@ def terminate_machine(instance_id):
                                      aws_secret_access_key=settings.aws_secret)
 
     if not ec2:
-        logger.error('Cannot connect to region %s' % settings.aws_region)
+        logging.error('Cannot connect to region %s' % settings.aws_region)
         return None
     try:
         terminated = ec2.terminate_instances([instance_id])
-        logger.info('Succesfully terminated %d instances %s', len(terminated), ' '.join(terminated))
+        logging.info('Succesfully terminated %d instances %s', len(terminated), ' '.join(terminated))
         return terminated
     except Exception:
-        logger.exception('Cannot terminate instance %s' % instance_id)
+        logging.exception('Cannot terminate instance %s' % instance_id)
         return None
 
 def my_booted_machine(reservation_id):
@@ -61,7 +60,7 @@ def my_booted_machine(reservation_id):
                                      aws_secret_access_key=settings.aws_secret)
 
     if not ec2:
-        logger.error('Cannot connect to region %s' % settings.aws_region)
+        logging.error('Cannot connect to region %s' % settings.aws_region)
         return None, None
     try:
         reservations = ec2.get_all_reservations()
@@ -69,26 +68,23 @@ def my_booted_machine(reservation_id):
         if len(reservation) > 0 and len(reservation[0].instances) > 0:
             return reservation[0].instances[0].id, reservation[0].instances[0].ip_address
     except Exception:
-        logger.exception('Could not get reservations for %s' % reservation_id)
+        logging.exception('Could not get reservations for %s' % reservation_id)
     return None, None
 
-def check_running(instance_id):
+def get_status(instance_id):
     ec2 = boto.ec2.connect_to_region(settings.aws_region,
                                      aws_access_key_id=settings.aws_access,
                                      aws_secret_access_key=settings.aws_secret)
 
     if not ec2:
-        logger.error('Cannot connect to region %s' % settings.aws_region)
+        logging.error('Cannot connect to region %s' % settings.aws_region)
         return None, None
     try:
         statuses = ec2.get_all_instance_status(instance_ids = [instance_id])
         if len(statuses) == 1:
-            current_status = statuses[0].system_status
-            logging.info('current %s status: %s' % (instance_id, current_status))
-            return current_status.lower() == 'status:ok'
-        else:
-            logging.warning('could not retrieve status for %s' % instance_id)
-            return False
+            logging.info('current %s status: %s' % (instance_id, statuses[0].system_status))
+            return statuses[0].system_status
+        return None
     except Exception:
-        logger.exception('Could not get status for %s' % instance_id)
-    return False
+        logging.exception('Could not get status for %s' % instance_id)
+    return None

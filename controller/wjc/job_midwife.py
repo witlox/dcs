@@ -14,11 +14,8 @@ from settings import Settings
 
 
 class JobMidwife(threading.Thread):
-
-    logger = logging.getLogger(__name__)
-
     def __init__(self, client):
-        self.logger.info('starting job midwife crisis')
+        logging.info('starting job midwife crisis')
         threading.Thread.__init__(self)
         self.daemon = True
         self.settings = Settings()
@@ -32,15 +29,30 @@ class JobMidwife(threading.Thread):
         while self.running:
             self.check_newborn()
             sleep(60)
-        self.logger.info('sending midwife home')
+        logging.info('sending midwife home')
 
     def check_newborn(self):
-        self.logger.info('checking for job updates')
+        logging.info('checking for job updates')
         for key in self.client.keys('job-*'):
             try:
                 job = pickle.loads(self.client.get(key))
                 if job.state == 'uploaded':
-                    self.logger.info('found job to transmit to worker %s, preparing script' % key)
+                    # fish ip
+                    logging.info('getting worker ip')
+                    ip = None
+                    for worker_key in self.client.keys('jm-*'):
+                        worker = pickle.loads(self.client.get(worker_key))
+                        if worker.job_id == key:
+                            ip = worker.ip_address
+                    if ip is None:
+                        raise Exception('Could not determine IP address for worker/job %s' % key)
+                    # check if state is ok
+                    ami_stat = 'http://%s/ilm/ami/%s' % (self.settings.web, worker.instance)
+                    logging.info('retrieving AMI (%s) status: %s' % (worker.instance, ami_stat))
+                    if ami_stat.lower() != 'status:ok':
+                        logging.info('AMI (%s) NOK, waiting...' % ami_stat)
+                        continue
+                    logging.info('found job to transmit to worker %s, preparing script' % key)
                     ramon = None
                     with open('ramon.py', 'r') as r:
                         ramon = r.read()
@@ -52,32 +64,23 @@ class JobMidwife(threading.Thread):
                         smooth.writelines(ramon)
                     st = os.stat(fn)
                     os.chmod(fn, st.st_mode | stat.S_IEXEC)
-                    self.logger.info('script %s prepared' % fn)
+                    logging.info('script %s prepared' % fn)
                     ssh = paramiko.SSHClient()
                     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
                     # fish ami
                     ami_req = 'http://%s/ilm/ami/%s' % (self.settings.web, job.ami)
-                    self.logger.info('retrieving AMI settings from %s' % ami_req)
+                    logging.info('retrieving AMI settings from %s' % ami_req)
                     r = requests.get(ami_req)
                     data = pickle.loads(json.loads(r.content))
                     username = data[0]
                     key_file = data[1]
                     with open('%s.key' % key, 'wb') as hairy:
                         hairy.write(key_file)
-                    # fish ip
-                    self.logger.info('getting worker ip')
-                    ip = None
-                    for worker_key in self.client.keys('jm-*'):
-                        worker = pickle.loads(self.client.get(worker_key))
-                        if worker.job_id == key:
-                            ip = worker.ip_address
-                    if ip is None:
-                        raise Exception('Could not determine IP address for worker/job %s' % key)
-                    self.logger.info('establishing connection to %s using user %s' % (ip, username))
+                    logging.info('establishing connection to %s using user %s' % (ip, username))
                     ssh.connect(hostname=ip, username=username, key_filename='%s.key' % key)
                     sftp = ssh.open_sftp()
                     sftp.put(fn, fn)
-                    self.logger.info('transferred script, setting up env and calling remote start')
+                    logging.info('transferred script, setting up env and calling remote start')
                     _, out, err = ssh.exec_command('virtualenv venv && '
                                                    'source venv/bin/activate && '
                                                    'pip install python-logstash requests && '
@@ -86,12 +89,12 @@ class JobMidwife(threading.Thread):
                     output = out.readlines()
                     error = err.readlines()
                     if output:
-                        self.logger.info('%s output: %s' % (key, output))
+                        logging.info('%s output: %s' % (key, output))
                     if error:
-                        self.logger.error('%s error: %s' % (key, error))
+                        logging.error('%s error: %s' % (key, error))
                     ssh.close()
                     os.remove('%s.key' % key)
                     os.remove(fn)
-                    self.logger.info('script should be running now, check kibana for messages')
+                    logging.info('script should be running now, check kibana for messages')
             except Exception:
-                self.logger.exception('but not going to break our job midwife')
+                logging.exception('but not going to break our job midwife')

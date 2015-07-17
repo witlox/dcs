@@ -13,9 +13,6 @@ with open('logging.json') as jl:
     dictConfig(json.load(jl))
 
 class AmiRepository(threading.Thread):
-
-    logger = logging.getLogger(__name__)
-
     def __init__(self):
         try:
             threading.Thread.__init__(self)
@@ -27,7 +24,7 @@ class AmiRepository(threading.Thread):
             self.midwife.start()
             self.start()
         except Exception:
-            self.logger.exception('Cannot connect with the database server')
+            logging.exception('Cannot connect with the database server')
 
     def get_all_amis(self):
         return self.client.keys('ami*')
@@ -36,11 +33,11 @@ class AmiRepository(threading.Thread):
         return self.client.get(name)
 
     def insert_ami(self, ami, username, private_key):
-        self.logger.info('registering new AMI %s with user %s' % (ami, username))
+        logging.info('registering new AMI %s with user %s' % (ami, username))
         return self.client.set(ami, pickle.dumps([username, private_key]))
 
     def delete_ami(self, ami):
-        self.logger.info('removing AMI %s' % ami)
+        logging.info('removing AMI %s' % ami)
         return self.client.delete(ami)
 
     def get_all_workers(self):
@@ -54,7 +51,7 @@ class AmiRepository(threading.Thread):
         for item in self.pubsub.listen():
             if item['data'] == 'KILL':
                 self.pubsub.unsubscribe()
-                self.logger.info('unsubscribed and finished')
+                logging.info('unsubscribed and finished')
                 break
             else:
                 self.job_changed(item['data'])
@@ -76,12 +73,13 @@ class AmiRepository(threading.Thread):
                 self.client.set(job_id, pickle.dumps(job))
                 self.client.publish('jobs', job_id)
         else:
-            self.logger.info('removing worker for job %s' % job_id)
+            logging.info('removing worker for job %s' % job_id)
             for worker_id in self.client.keys('jm-*'):
                 worker = pickle.loads(self.client.get(worker_id))
                 if worker.job_id == job_id and worker.instance is not None:
-                    if aws.check_running(worker.instance):
+                    status = aws.get_status(worker.instance)
+                    if status is not None and status.lower() == 'status:ok':
                         result = aws.terminate_machine(worker.instance)
                         if result is None:
-                            self.logger.error('Could not remove worker %s, remove manually!' % worker.instance)
+                            logging.error('Could not remove worker %s, remove manually!' % worker.instance)
                     self.client.delete(worker_id)

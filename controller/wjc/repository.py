@@ -11,16 +11,13 @@ with open('logging.json') as jl:
     dictConfig(json.load(jl))
 
 class JobRepository:
-
-    logger = logging.getLogger(__name__)
-
     def __init__(self):
         try:
             self.client = redis.Redis('db')
             self.midwife = JobMidwife(self.client)
             self.midwife.start()
         except Exception:
-            self.logger.exception('Cannot connect with the database server')
+            logging.exception('Cannot connect with the database server')
 
     def get_all_jobs(self):
         result = []
