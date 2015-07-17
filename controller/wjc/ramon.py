@@ -43,11 +43,14 @@ try:
     r = requests.get('http://[web]/store/[uuid].zip')
     if r.status_code != 200:
         raise Exception('could not download [uuid].zip')
-    with open('./[uuid].zip', 'wb') as f:
+    with open('[uuid].zip', 'wb') as f:
         f.write(r.content)
+    # extract to work dir
+    os.mkdir('[uuid]')
+    os.chdir('[uuid]')
     # unzip the file
     r = requests.post('http://[web]/wjc/jobs/[uuid]/state/extracting')
-    with zipfile.ZipFile('[uuid].zip') as zf:
+    with zipfile.ZipFile('../[uuid].zip') as zf:
         zf.extractall()
     # reset permissions
     for root, dirs, files in os.walk('.'):
@@ -82,8 +85,8 @@ try:
             logging.error(error_line)
     # zip the results
     r = requests.post('http://[web]/wjc/jobs/[uuid]/state/compressing')
-    os.remove('./[uuid].zip')
-    with zipfile.ZipFile('[uuid].zip', mode='w') as zf:
+    os.remove('../[uuid].zip')
+    with zipfile.ZipFile('../[uuid].zip', mode='w') as zf:
         for root, dirs, files in os.walk('.'):
             for file in files:
                 zf.write(os.path.join(root, file))
@@ -91,7 +94,7 @@ try:
     r = requests.post('http://[web]/wjc/jobs/[uuid]/state/uploading')
     # remove old file on store
     r = requests.delete('http://[web]/store/[uuid].zip')
-    with open('./[uuid].zip', 'rb') as data:
+    with open('../[uuid].zip', 'rb') as data:
         headers = {'Content-Type': 'application/octet-stream'}
         r = requests.post('http://[web]/store/[uuid].zip', data=data, headers=headers)
         if r.status_code != 200:
