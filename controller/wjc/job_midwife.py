@@ -78,11 +78,10 @@ class JobMidwife(threading.Thread):
                     ssh.connect(hostname=ip, username=username, key_filename='%s.key' % key)
                     sftp = ssh.open_sftp()
                     sftp.put(fn, fn)
-                    logging.info('transferred scripts, setting up env and calling remote start')
-                    _, out, err = ssh.exec_command('virtualenv venv && '
-                                                   'source venv/bin/activate && '
-                                                   'pip install python-logstash requests && '
-                                                   'nohup ./%s  > /dev/null 2>&1 &\n' % fn)
+                    ssh.exec_command('chmod +x %s' % fn)
+                    start = 'virtualenv venv\nsource venv/bin/activate\npip install python-logstash requests\nnohup ./%s  > /dev/null 2>&1 &\n' % fn
+                    logging.info('calling remote start with %s' % start)
+                    _, out, err = ssh.exec_command(start)
                     output = out.readlines()
                     error = err.readlines()
                     if output:
