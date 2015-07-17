@@ -23,7 +23,7 @@ def start_machine(ami, instance):
         return None
 
     worker_id = 'jm-%s' % uuid.uuid4()
-    logging.info('Request workerID = %s', worker_id)
+    logging.info('Request workerID = %s' % worker_id)
     try:
         reservation = ec2.run_instances(
             ami,
@@ -32,7 +32,7 @@ def start_machine(ami, instance):
             user_data=base64.b64encode(worker_id),
             instance_initiated_shutdown_behavior='terminate',
         )
-        logging.info('Reservation %s for worker %s', reservation.id, worker_id)
+        logging.info('Reservation %s for worker %s' % (reservation.id, worker_id))
         return worker_id, reservation.id
     except Exception:
         logging.exception('Cannot reserve instance %s for type %s' % (ami, instance))
@@ -48,7 +48,7 @@ def terminate_machine(instance_id):
         return None
     try:
         terminated = ec2.terminate_instances([instance_id])
-        logging.info('Succesfully terminated %d instances %s', len(terminated), ' '.join(terminated))
+        logging.info('Succesfully terminated %d instances %s' % (len(terminated), ' '.join(terminated)))
         return terminated
     except Exception:
         logging.exception('Cannot terminate instance %s' % instance_id)
