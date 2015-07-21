@@ -189,10 +189,10 @@ class TestIlm(unittest.TestCase):
 
         assert midwife.client.keys.call_count == 1
         assert midwife.client.get.call_count == 2
-        assert midwife.client.set.call_count == 2
+        assert midwife.client.set.call_count == 1
         assert midwife.client.publish.call_count == 1
         assert self.aws_mock.my_booted_machine.call_count == 0
-        assert pickle.loads(midwife.client.set.call_args_list[1][0][1]).state == 'boot failed'
+        assert pickle.loads(midwife.client.set.call_args_list[0][0][1]).state == 'received'
 
     @mock.patch('machine_midwife.MachineMidwife.__init__', mock.Mock(return_value=None))
     def test_machinemidwife_finished_flow(self):
