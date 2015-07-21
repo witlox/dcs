@@ -151,5 +151,3 @@ def handle_application_exception(error):
     response = jsonify(error.to_dict())
     response.status_code = error.status_code
     return response
-
-app.run(port=9999)
