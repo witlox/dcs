@@ -13,6 +13,10 @@ def __get_jobs__():
     repository = app.config['REPOSITORY']
     return Response(dumps(repository.get_all_jobs()), mimetype='application/json')
 
+def __get_batch__():
+    repository = app.config['REPOSITORY']
+    return Response(dumps(repository.get_all_batch()), mimetype='application/json')
+
 def __add_jobs__(data):
     jdata = data.get_json(force=True)
     repository = app.config['REPOSITORY']
@@ -80,6 +84,13 @@ def get_state(name):
 def set_state(name, new_state):
     """ set job state """
     return __set_job_state__(name, new_state)
+
+@app.route('/batch', methods=['GET'])
+@auto.doc()
+def get_batch():
+    """ list currently registered batch jobs """
+    return __get_batch__()
+
 
 @app.route('/batch/<int:max_nodes>', methods=['POST'])
 @auto.doc()

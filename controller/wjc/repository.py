@@ -27,6 +27,13 @@ class JobRepository:
             result.append([job_key, job.state, job.ami, job.instance_type])
         return result
 
+    def get_all_batch(self):
+        result = []
+        for batch_key in self.client.keys('batch-*'):
+            batch = pickle.loads(self.client.get(batch_key))
+            result.append([batch_key, batch.state, batch.ami, batch.instance_type, batch.max_nodes, batch.files])
+        return result
+
     def insert_job(self, ami, instance_type):
         job_id = 'job-%s' % uuid.uuid4()
         job = Job('received')
