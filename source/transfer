@@ -34,8 +34,7 @@ if args['action'] == 'upload':
         cstr = 'http://%s/store/%s' % (args['server'], file_name)
         print 'calling %s' % cstr
         headers = {'Content-Type': 'application/octet-stream'}
-        block = data.read()
-        r = requests.post(cstr, data=block, headers=headers)
+        r = requests.post(cstr, data=data.read(), headers=headers)
         if r.status_code != 200:
             raise Exception('Status code not 200, %s' % r.content)
         cstr = 'http://%s/wjc/jobs/%s/state/uploaded' % (args['server'], up_file)

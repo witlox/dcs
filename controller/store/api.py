@@ -53,12 +53,15 @@ def __extract__(file_name):
     path = os.path.join(app.config['settings'], file_name)
     if not os.path.exists(path):
         raise ApplicationException('Requested file (%s) does not exist' % file_name)
-    os.mkdir(os.path.join(app.config['settings'], os.path.splitext(file_name)[0]))
-    os.chdir(os.path.join(app.config['settings'], os.path.splitext(file_name)[0]))
+    file_path = os.path.join(app.config['settings'], os.path.splitext(file_name)[0])
+    if os.path.exists(file_path):
+        shutil.rmtree(file_path)
+    os.mkdir(file_path)
+    os.chdir(file_path)
     with zipfile.ZipFile('../%s' % file_name) as zf:
         zf.extractall()
     created = []
-    for _, d, _ in os.walk('.'):
+    for d in next(os.walk('.'))[1]:
         shutil.make_archive('../job-%s' % d, 'zip', d)
         created.append('job-%s' % str(d))
     os.chdir('..')
@@ -68,8 +71,11 @@ def __extract__(file_name):
 def __compress__(data, file_name):
     jdata = data.get_json(force=True)
     file_names = jdata['file_names']
-    os.mkdir(os.path.join(app.config['settings'], os.path.splitext(file_name)[0]))
-    os.chdir(os.path.join(app.config['settings'], os.path.splitext(file_name)[0]))
+    file_path = os.path.join(app.config['settings'], os.path.splitext(file_name)[0])
+    if os.path.exists(file_path):
+        shutil.rmtree(file_path)
+    os.mkdir(file_path)
+    os.chdir(file_path)
     for name in file_names:
         os.mkdir(os.path.splitext(name)[0])
         os.chdir(os.path.splitext(name)[0])
@@ -145,3 +151,5 @@ def handle_application_exception(error):
     response = jsonify(error.to_dict())
     response.status_code = error.status_code
     return response
+
+app.run(port=9999)
