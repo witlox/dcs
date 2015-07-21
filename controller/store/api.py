@@ -1,5 +1,7 @@
 from json import dumps
 import os
+import shutil
+import zipfile
 from flask_autodoc import Autodoc
 from flask import Flask, request, jsonify, make_response, Response
 
@@ -47,6 +49,40 @@ def __get_all_files__():
         raise ApplicationException('Something wrong with our filesystem (%s)' % root)
     return Response(dumps([f for f in os.listdir(root) if os.path.isfile(os.path.join(root, f))]), mimetype='application/json')
 
+def __extract__(file_name):
+    path = os.path.join(app.config['settings'], file_name)
+    if not os.path.exists(path):
+        raise ApplicationException('Requested file (%s) does not exist' % file_name)
+    os.mkdir(os.path.join(app.config['settings'], os.path.splitext(file_name)[0]))
+    os.chdir(os.path.join(app.config['settings'], os.path.splitext(file_name)[0]))
+    with zipfile.ZipFile('../%s' % file_name) as zf:
+        zf.extractall()
+    created = []
+    for _, d, _ in os.walk('.'):
+        shutil.make_archive('../job-%s' % d, 'zip', d)
+        created.append('job-%s' % str(d))
+    os.chdir('..')
+    shutil.rmtree(os.path.splitext(file_name)[0])
+    return Response(dumps(created), mimetype='application/json')
+
+def __compress__(data, file_name):
+    jdata = data.get_json(force=True)
+    file_names = jdata['file_names']
+    os.mkdir(os.path.join(app.config['settings'], os.path.splitext(file_name)[0]))
+    os.chdir(os.path.join(app.config['settings'], os.path.splitext(file_name)[0]))
+    for name in file_names:
+        os.mkdir(os.path.splitext(name)[0])
+        os.chdir(os.path.splitext(name)[0])
+        with zipfile.ZipFile('../../%s' % name) as zf:
+            zf.extractall()
+        os.chdir('..')
+    shutil.make_archive('../%s' % file_name, 'zip')
+    os.chdir('..')
+    shutil.rmtree(os.path.splitext(file_name)[0])
+    for name in file_names:
+        os.remove(os.path.join(app.config['settings'], name))
+    return 'ok'
+
 
 # actual api here :P
 @app.route('/')
@@ -76,6 +112,16 @@ def delete(file_name):
 def list_files():
     """ List all files in the store """
     return __get_all_files__()
+
+@app.route('/extract/<file_name>', methods=['GET'])
+def extract(file_name):
+    """ extract a file on the store """
+    return __extract__(file_name)
+
+@app.route('/compress/<file_name>', methods=['POST'])
+def extract(file_name):
+    """ compress multiple archives into one archive on the store """
+    return __compress__(request, file_name)
 
 
 # register error handlers

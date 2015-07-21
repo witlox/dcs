@@ -35,6 +35,12 @@ def __set_job_state__(name, new_state):
     repository = app.config['REPOSITORY']
     return Response(dumps(repository.set_job_state(name, new_state)), mimetype='application/json')
 
+def __batch_submit__(data, max_nodes):
+    jdata = data.get_json(force=True)
+    repository = app.config['REPOSITORY']
+    aid = repository.execute_batch(max_nodes, jdata['ami'], jdata['instance_type'])
+    return Response(dumps(aid), mimetype='application/json')
+
 # actual api :P
 
 @app.route('/')
@@ -74,6 +80,15 @@ def get_state(name):
 def set_state(name, new_state):
     """ set job state """
     return __set_job_state__(name, new_state)
+
+@app.route('/batch/<int:max_nodes>', methods=['POST'])
+@auto.doc()
+def batch_submit(max_nodes):
+    """
+    submit batch of jobs, with maximum nodes to use
+    :argument BATCH (json) => {ami, instance_type}
+    """
+    return __batch_submit__(request, max_nodes)
 
 # register error handlers
 class ApplicationException(Exception):

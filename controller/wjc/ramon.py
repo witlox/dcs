@@ -6,6 +6,7 @@ import requests
 import stat
 import subprocess
 import zipfile
+import shutil
 from logging.config import dictConfig, logging
 
 dictConfig({
@@ -85,10 +86,7 @@ try:
     # zip the results
     r = requests.post('http://[web]/wjc/jobs/[uuid]/state/compressing')
     os.remove('../[uuid].zip')
-    with zipfile.ZipFile('../[uuid].zip', mode='w') as zf:
-        for root, dirs, files in os.walk('.'):
-            for file in files:
-                zf.write(os.path.join(root, file))
+    shutil.make_archive('../[uuid]', 'zip')
     # upload the results
     r = requests.post('http://[web]/wjc/jobs/[uuid]/state/uploading')
     # remove old file on store

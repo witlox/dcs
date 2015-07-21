@@ -32,12 +32,12 @@ class MachineMidwife(threading.Thread):
                 worker = pickle.loads(self.client.get(worker_id))
                 job = pickle.loads(self.client.get(worker.job_id))
                 if worker.reservation is not None and worker.instance is None and job.state == 'requested':
-                    if datetime.now() - worker.request_time > timedelta(hours=1):
-                        logging.warning('reservation %s has become stale, cleaning up' % worker.reservation)
-                        self.client.set(worker_id, pickle.dumps(worker))
-                        job.state = 'boot failed'
+                    if datetime.now() - worker.request_time > timedelta(minutes=15):
+                        logging.warning('reservation %s has become stale, restarting' % worker.reservation)
+                        job.state = 'received'
                         self.client.set(worker.job_id, pickle.dumps(job))
                         self.client.publish('jobs', worker.job_id)
+                        self.client.delete(worker_id)
                         continue
                     aws_instance, ip_address = aws.my_booted_machine(worker.reservation)
                     if aws_instance is not None:
@@ -53,6 +53,7 @@ class MachineMidwife(threading.Thread):
                     result = aws.terminate_machine(worker.instance)
                     if result is None:
                         logging.error('Could not remove worker %s, remove manually!' % worker.instance)
+                    self.client.delete(worker_id)
                 elif worker.instance is not None and job.state == 'failed':
                     if self.settings.aws_auto_remove_failed:
                         logging.info('autoremove on failure enabled, trying to remove %s' % worker.instance)
@@ -61,5 +62,6 @@ class MachineMidwife(threading.Thread):
                             logging.error('Could not remove worker %s, remove manually!' % worker.instance)
                     else:
                         logging.warning('autoremove on failure disabled, manually remove %s!' % worker.instance)
+                    self.client.delete(worker_id)
             except Exception:
                 logging.exception('but not going to break our machine midwife')
