@@ -24,7 +24,7 @@ To start the system:
 - sudo usermod -a -G docker ec2-user
 - LOG OUT AND LOG IN AGAIN
 - git clone https://github.com/witlox/dcs
-- cd contoller
+- cd dcs/contoller
 - edit the ilm.conf, wjc.conf and start.sh to represent your environment
 - create the mount point for storage and database
 - run update.sh to get the latest images

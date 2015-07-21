@@ -119,7 +119,7 @@ def extract(file_name):
     return __extract__(file_name)
 
 @app.route('/compress/<file_name>', methods=['POST'])
-def extract(file_name):
+def compress(file_name):
     """ compress multiple archives into one archive on the store """
     return __compress__(request, file_name)
 
