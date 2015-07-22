@@ -36,6 +36,7 @@ class JobMidwife(threading.Thread):
         for batch_key in self.client.keys('batch-*'):
             batch = pickle.loads(self.client.get(batch_key))
             if batch.state == 'uploaded':
+                logging.info('detected uploaded batch %s' % batch_key)
                 extract_req = 'http://%s/store/extract/%s.zip' % (self.settings.web, batch_key)
                 extract_resp = requests.get(extract_req)
                 batch.files = json.loads(extract_resp.content)
@@ -44,11 +45,12 @@ class JobMidwife(threading.Thread):
             elif batch.state == 'extracted':
                 for job_file in batch.files:
                     current = 0
-                    if str(job_file) in self.client.keys('job-*'):
-                        job = self.client.get(str(job_file))
-                        if job and job.state != 'finished' and job.state != 'failed':
+                    if job_file in self.client.keys('job-*'):
+                        job = pickle.loads(self.client.get(job_file))
+                        if job.state != 'finished' and job.state != 'failed':
                             current += 1
                 if current == len(batch.files):
+                    logging.info('all batch jobs have been completed, finalizing')
                     batch.state = 'compressing'
                     self.client.set(batch_key, pickle.dumps(batch))
                     continue
@@ -61,6 +63,7 @@ class JobMidwife(threading.Thread):
                         self.client.publish('jobs', job_file)
                         current += 1
             elif batch.state == 'compressing':
+                logging.info('detected finalized batch %s, compressing...' % batch_key)
                 data = json.dumps(batch.files)
                 compress_req = 'http://%s/store/compress/%s.zip' % (self.settings.web, batch_key)
                 requests.post(compress_req, data=data)
