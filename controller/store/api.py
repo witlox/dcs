@@ -72,6 +72,8 @@ def __compress__(data, file_name):
     jdata = data.get_json(force=True)
     file_names = jdata['file_names']
     file_path = os.path.join(app.config['settings'], os.path.splitext(file_name)[0])
+    if os.path.exists(file_name):
+        os.remove(file_name)
     if os.path.exists(file_path):
         shutil.rmtree(file_path)
     os.mkdir(file_path)
@@ -82,7 +84,7 @@ def __compress__(data, file_name):
         with zipfile.ZipFile('../../%s.zip' % name) as zf:
             zf.extractall()
         os.chdir('..')
-    shutil.make_archive('../%s' % file_name, 'zip')
+    shutil.make_archive('../%s' % os.path.splitext(file_name)[0], 'zip')
     os.chdir('..')
     shutil.rmtree(os.path.splitext(file_name)[0])
     for name in file_names:
