@@ -83,6 +83,7 @@ try:
         error_line = error_reader.read()
         if error_line is not None and len(error_line) > 0:
             logging.error(error_line)
+    failure = process.returncode != 0
     # zip the results
     r = requests.post('http://[web]/wjc/jobs/[uuid]/state/compressing')
     os.remove('../[uuid].zip')
@@ -97,8 +98,12 @@ try:
         if r.status_code != 200:
             raise Exception('could not upload results')
     # finished
-    r = requests.post('http://[web]/wjc/jobs/[uuid]/state/finished')
-    logging.info('job [uuid] done')
+    if failure:
+        r = requests.post('http://[web]/wjc/jobs/[uuid]/state/failed')
+        logging.error('Job returned error code %s' % str(process.returncode))
+    else:
+        r = requests.post('http://[web]/wjc/jobs/[uuid]/state/finished')
+        logging.info('job [uuid] done')
 except Exception:
     logging.exception('Failed to complete work')
     r = requests.post('http://[web]/wjc/jobs/[uuid]/state/failed')
