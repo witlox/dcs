@@ -36,21 +36,24 @@ class JobMidwife(threading.Thread):
         for batch_key in self.client.keys('batch-*'):
             batch = pickle.loads(self.client.get(batch_key))
             if batch.state == 'uploaded':
-                logging.info('detected uploaded batch %s' % batch_key)
+                logging.info('detected uploaded %s' % batch_key)
                 extract_req = 'http://%s/store/extract/%s.zip' % (self.settings.web, batch_key)
                 extract_resp = requests.get(extract_req)
                 batch.files = json.loads(extract_resp.content)
                 batch.state = 'extracted'
                 self.client.set(batch_key, pickle.dumps(batch))
             elif batch.state == 'extracted':
+                finished = 0
                 current = 0
                 for job_file in batch.files:
                     if job_file in self.client.keys('job-*'):
                         job = pickle.loads(self.client.get(job_file))
                         if job.state != 'finished' and job.state != 'failed':
                             current += 1
-                logging.info("currently finished %d of %d jobs in batch %s" % (current, len(batch.files), batch_key))
-                if current == len(batch.files):
+                        else:
+                            finished += 1
+                logging.info("currently running %d jobs and finished %d jobs of %d total jobs in %s" % (current, finished, len(batch.files), batch_key))
+                if finished == len(batch.files):
                     logging.info('all batch jobs have been completed, finalizing')
                     batch.state = 'compressing'
                     self.client.set(batch_key, pickle.dumps(batch))
@@ -65,7 +68,7 @@ class JobMidwife(threading.Thread):
                         self.client.publish('jobs', job_file)
                         current += 1
             elif batch.state == 'compressing':
-                logging.info('detected finalized batch %s, compressing...' % batch_key)
+                logging.info('detected finalized %s, compressing...' % batch_key)
                 data = json.dumps(batch.files)
                 compress_req = 'http://%s/store/compress/%s.zip' % (self.settings.web, batch_key)
                 requests.post(compress_req, data=data)
