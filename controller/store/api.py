@@ -68,12 +68,11 @@ def __extract__(file_name):
     shutil.rmtree(os.path.splitext(file_name)[0])
     return Response(dumps(created), mimetype='application/json')
 
-def __compress__(data, file_name):
-    jdata = data.get_json(force=True)
-    file_names = jdata['file_names']
+def __compress__(pdata, file_name):
+    file_names = pdata.get_json(force=True)
     file_path = os.path.join(app.config['settings'], os.path.splitext(file_name)[0])
-    if os.path.exists(file_name):
-        os.remove(file_name)
+    if os.path.exists(os.path.join(app.config['settings'], file_name)):
+        os.remove(os.path.join(app.config['settings'], file_name))
     if os.path.exists(file_path):
         shutil.rmtree(file_path)
     os.mkdir(file_path)
@@ -88,7 +87,9 @@ def __compress__(data, file_name):
     os.chdir('..')
     shutil.rmtree(os.path.splitext(file_name)[0])
     for name in file_names:
-        os.remove(os.path.join(app.config['settings'], name))
+        fp = os.path.join(app.config['settings'], '%s.zip' % name)
+        if os.path.exists(fp):
+            os.remove(fp)
     return 'ok'
 
 
