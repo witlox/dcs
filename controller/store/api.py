@@ -79,7 +79,7 @@ def __compress__(data, file_name):
     for name in file_names:
         os.mkdir(os.path.splitext(name)[0])
         os.chdir(os.path.splitext(name)[0])
-        with zipfile.ZipFile('../../%s' % name) as zf:
+        with zipfile.ZipFile('../../%s.zip' % name) as zf:
             zf.extractall()
         os.chdir('..')
     shutil.make_archive('../%s' % file_name, 'zip')
