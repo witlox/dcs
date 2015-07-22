@@ -44,9 +44,9 @@ class JobMidwife(threading.Thread):
             elif batch.state == 'extracted':
                 for job_file in batch.files:
                     current = 0
-                    if job_file in self.client.keys('job-*'):
-                        job = self.client.get(job_file)
-                        if job.state != 'finished' and job.state != 'failed':
+                    if str(job_file) in self.client.keys('job-*'):
+                        job = self.client.get(str(job_file))
+                        if job and job.state != 'finished' and job.state != 'failed':
                             current += 1
                 if current == len(batch.files):
                     batch.state = 'compressing'
