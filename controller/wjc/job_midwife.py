@@ -43,12 +43,13 @@ class JobMidwife(threading.Thread):
                 batch.state = 'extracted'
                 self.client.set(batch_key, pickle.dumps(batch))
             elif batch.state == 'extracted':
+                current = 0
                 for job_file in batch.files:
-                    current = 0
                     if job_file in self.client.keys('job-*'):
                         job = pickle.loads(self.client.get(job_file))
                         if job.state != 'finished' and job.state != 'failed':
                             current += 1
+                logging.info("currently finished %d of %d jobs in batch %s" % (current, len(batch.files), batch_key))
                 if current == len(batch.files):
                     logging.info('all batch jobs have been completed, finalizing')
                     batch.state = 'compressing'
@@ -56,6 +57,7 @@ class JobMidwife(threading.Thread):
                     continue
                 for job_file in batch.files:
                     if job_file not in self.client.keys('job-*') and current < batch.max_nodes:
+                        logging.info('detected empty slot (%d/%d) for %s, creating job' % (current, batch.max_nodes, batch_key))
                         job = Job('received')
                         job.ami = batch.ami
                         job.instance_type = batch.instance_type
