@@ -1,2 +1,3 @@
 flask-autodoc
 flask
+python-logstash
