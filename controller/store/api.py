@@ -1,9 +1,14 @@
-from json import dumps
+import json
 import os
 import shutil
 import zipfile
+from json import dumps
+from logging.config import dictConfig, logging
 from flask_autodoc import Autodoc
 from flask import Flask, request, jsonify, make_response, Response
+
+with open('logging.json') as jl:
+    dictConfig(json.load(jl))
 
 app = Flask(__name__)
 auto = Autodoc(app)
@@ -16,6 +21,7 @@ else:
     app.config['settings'] = '/tmp/store'
 
 def __upload__(file_name):
+    logging.info(file_name)
     if request.headers['Content-Type'] == 'application/octet-stream':
         path = os.path.join(app.config['settings'], file_name)
         if os.path.exists(path):
@@ -26,6 +32,7 @@ def __upload__(file_name):
     raise ApplicationException('No data in upload request')
 
 def __download__(file_name):
+    logging.info(file_name)
     path = os.path.join(app.config['settings'], file_name)
     if not os.path.exists(path):
         raise ApplicationException('Requested file (%s) does not exist' % file_name)
@@ -37,11 +44,12 @@ def __download__(file_name):
     return response
 
 def __deleter__(file_name):
+    logging.info(file_name)
     path = os.path.join(app.config['settings'], file_name)
     if not os.path.exists(path):
         raise ApplicationException('Requested file (%s) does not exist' % file_name)
     os.remove(path)
-    return 'ok'
+    return Response('ok')
 
 def __get_all_files__():
     root = app.config['settings']
@@ -50,50 +58,61 @@ def __get_all_files__():
     return Response(dumps([f for f in os.listdir(root) if os.path.isfile(os.path.join(root, f))]), mimetype='application/json')
 
 def __extract__(file_name):
+    logging.info(file_name)
     path = os.path.join(app.config['settings'], file_name)
     if not os.path.exists(path):
         raise ApplicationException('Requested file (%s) does not exist' % file_name)
-    file_path = os.path.join(app.config['settings'], os.path.splitext(file_name)[0])
-    if os.path.exists(file_path):
-        shutil.rmtree(file_path)
-    os.mkdir(file_path)
-    os.chdir(file_path)
-    with zipfile.ZipFile('../%s' % file_name) as zf:
-        zf.extractall()
-    created = []
-    for d in next(os.walk('.'))[1]:
-        shutil.make_archive('../job-%s' % d, 'zip', d)
-        created.append('job-%s' % str(d))
-    os.chdir('..')
-    shutil.rmtree(os.path.splitext(file_name)[0])
-    return Response(dumps(created), mimetype='application/json')
+    try:
+        file_path = os.path.join(app.config['settings'], os.path.splitext(file_name)[0])
+        if os.path.exists(file_path):
+            shutil.rmtree(file_path)
+        os.mkdir(file_path)
+        os.chdir(file_path)
+        with zipfile.ZipFile('../%s' % file_name) as zf:
+            zf.extractall()
+        created = []
+        for d in next(os.walk('.'))[1]:
+            shutil.make_archive('../job-%s' % d, 'zip', d)
+            created.append('job-%s' % str(d))
+        os.chdir('..')
+        shutil.rmtree(os.path.splitext(file_name)[0])
+        return Response(dumps(created), mimetype='application/json')
+    except Exception:
+        logging.exception('error during extract of %s' % file_name)
+        raise ApplicationException('error during extract of %s' % file_name)
 
 def __compress__(pdata, file_name):
+    logging.info(file_name)
     file_names = pdata.get_json(force=True)
     file_path = os.path.join(app.config['settings'], os.path.splitext(file_name)[0])
     if os.path.exists(os.path.join(app.config['settings'], file_name)):
         os.remove(os.path.join(app.config['settings'], file_name))
-    if os.path.exists(file_path):
-        shutil.rmtree(file_path)
-    os.mkdir(file_path)
-    os.chdir(file_path)
-    for name in file_names:
-        os.mkdir(os.path.splitext(name)[0])
-        os.chdir(os.path.splitext(name)[0])
-        with zipfile.ZipFile('../../%s.zip' % name) as zf:
-            zf.extractall()
+    try:
+        if os.path.exists(file_path):
+            shutil.rmtree(file_path)
+        os.mkdir(file_path)
+        os.chdir(file_path)
+        for name in file_names:
+            os.mkdir(os.path.splitext(name)[0])
+            os.chdir(os.path.splitext(name)[0])
+            with zipfile.ZipFile('../../%s.zip' % name) as zf:
+                zf.extractall()
+            os.chdir('..')
+        shutil.make_archive('../%s' % os.path.splitext(file_name)[0], 'zip')
         os.chdir('..')
-    shutil.make_archive('../%s' % os.path.splitext(file_name)[0], 'zip')
-    os.chdir('..')
-    shutil.rmtree(os.path.splitext(file_name)[0])
-    for name in file_names:
-        fp = os.path.join(app.config['settings'], '%s.zip' % name)
-        if os.path.exists(fp):
-            os.remove(fp)
-    return 'ok'
+        shutil.rmtree(os.path.splitext(file_name)[0])
+        for name in file_names:
+            fp = os.path.join(app.config['settings'], '%s.zip' % name)
+            if os.path.exists(fp):
+                os.remove(fp)
+        return Response('ok')
+    except Exception:
+        logging.exception('error during compress of %s' % file_name)
+        raise ApplicationException('error during compress of %s' % file_name)
 
 
 # actual api here :P
+
 @app.route('/')
 def documentation():
     return auto.html()

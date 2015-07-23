@@ -1,0 +1,36 @@
+{
+    "version": 1,
+    "disable_existing_loggers": "False",
+    "formatters": {
+        "standard": {
+          "format": "%(asctime)s[%(levelname)s]%(funcName)s:%(message)s",
+          "datefmt": "%Y-%m-%d %H:%M:%S"
+        },
+        "logstash": {
+          "format": "STORE - [%(levelname)s] %(funcName)s:%(message)s"
+        }
+    },
+    "handlers": {
+        "fh": {
+          "class": "logging.StreamHandler",
+          "formatter": "standard",
+          "level": "DEBUG",
+          "stream": "ext://sys.stdout"
+        },
+        "ls": {
+          "class": "logstash.TCPLogstashHandler",
+          "formatter": "logstash",
+          "level": "INFO",
+          "host": "logstash",
+          "port": 5000,
+          "version": 1
+        }
+    },
+    "loggers": {
+        "": {
+          "handlers": ["fh", "ls"],
+          "level": "DEBUG",
+          "propagate": "True"
+        }
+    }
+}
