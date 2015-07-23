@@ -12,7 +12,7 @@ install:
 script: nosetests tests
 # trigger docker builds
 after_success:
-  - curl --data "build=true" -X POST https://registry.hub.docker.com/u/witlox/wjc/trigger/0ef19937-ea1a-4387-b5a7-6517ca91e37a/
-  - curl --data "build=true" -X POST https://registry.hub.docker.com/u/witlox/ilm/trigger/103aac79-846b-439d-847a-2e8a7b3e7609/
+  - curl --data "build=true" -X POST https://registry.hub.docker.com/u/witlox/wjc/trigger/32e8ba6a-ae8a-4139-a3e5-90ba245b9d82/
+  - curl --data "build=true" -X POST https://registry.hub.docker.com/u/witlox/ilm/trigger/e0b1a156-3419-4bda-ad87-7efb24502195/
 # speed up build
 sudo: false

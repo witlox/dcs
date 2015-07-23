@@ -34,49 +34,52 @@ class JobMidwife(threading.Thread):
     def check_newborn(self):
         logging.info('checking for job updates')
         for batch_key in self.client.keys('batch-*'):
-            batch = pickle.loads(self.client.get(batch_key))
-            if batch.state == 'uploaded':
-                logging.info('detected uploaded %s' % batch_key)
-                extract_req = 'http://%s/store/extract/%s.zip' % (self.settings.web, batch_key)
-                extract_resp = requests.get(extract_req)
-                batch.files = json.loads(extract_resp.content)
-                batch.state = 'extracted'
-                self.client.set(batch_key, pickle.dumps(batch))
-            elif batch.state == 'extracted':
-                finished = 0
-                current = 0
-                for job_file in batch.files:
-                    if job_file in self.client.keys('job-*'):
-                        job = pickle.loads(self.client.get(job_file))
-                        if job.state != 'finished' and job.state != 'failed':
-                            current += 1
-                        else:
-                            finished += 1
-                logging.info("currently running %d jobs and finished %d jobs of %d total jobs in %s" % (current, finished, len(batch.files), batch_key))
-                if finished == len(batch.files):
-                    logging.info('all batch jobs have been completed, finalizing')
-                    batch.state = 'compressing'
+            try:
+                batch = pickle.loads(self.client.get(batch_key))
+                if batch.state == 'uploaded':
+                    logging.info('detected uploaded %s' % batch_key)
+                    extract_req = 'http://%s/store/extract/%s.zip' % (self.settings.web, batch_key)
+                    extract_resp = requests.get(extract_req)
+                    batch.files = json.loads(extract_resp.content)
+                    batch.state = 'extracted'
                     self.client.set(batch_key, pickle.dumps(batch))
-                    continue
-                for job_file in batch.files:
-                    if job_file not in self.client.keys('job-*') and current < batch.max_nodes:
-                        logging.info('detected empty slot (%d/%d) for %s, creating job' % (current, batch.max_nodes, batch_key))
-                        job = Job('received')
-                        job.ami = batch.ami
-                        job.instance_type = batch.instance_type
-                        self.client.set(job_file, pickle.dumps(job))
-                        self.client.publish('jobs', job_file)
-                        current += 1
-            elif batch.state == 'compressing':
-                logging.info('detected finalized %s, compressing...' % batch_key)
-                data = json.dumps(batch.files)
-                compress_req = 'http://%s/store/compress/%s.zip' % (self.settings.web, batch_key)
-                cresp = requests.post(compress_req, data=data)
-                if cresp.status_code == 200:
-                    batch.state == 'finished'
-                else:
-                    batch.state == 'failed'
-                self.client.set(batch_key, pickle.dumps(batch))
+                elif batch.state == 'extracted':
+                    finished = 0
+                    current = 0
+                    for job_file in batch.files:
+                        if job_file in self.client.keys('job-*'):
+                            job = pickle.loads(self.client.get(job_file))
+                            if job.state != 'finished' and job.state != 'failed':
+                                current += 1
+                            else:
+                                finished += 1
+                    logging.info("currently running %d jobs and finished %d jobs of %d total jobs in %s" % (current, finished, len(batch.files), batch_key))
+                    if finished == len(batch.files):
+                        logging.info('all batch jobs have been completed, finalizing')
+                        batch.state = 'compressing'
+                        self.client.set(batch_key, pickle.dumps(batch))
+                        continue
+                    for job_file in batch.files:
+                        if job_file not in self.client.keys('job-*') and current < batch.max_nodes:
+                            logging.info('detected empty slot (%d/%d) for %s, creating job' % (current, batch.max_nodes, batch_key))
+                            job = Job('received')
+                            job.ami = batch.ami
+                            job.instance_type = batch.instance_type
+                            self.client.set(job_file, pickle.dumps(job))
+                            self.client.publish('jobs', job_file)
+                            current += 1
+                elif batch.state == 'compressing':
+                    logging.info('detected finalized %s, compressing...' % batch_key)
+                    data = json.dumps(batch.files)
+                    compress_req = 'http://%s/store/compress/%s.zip' % (self.settings.web, batch_key)
+                    cresp = requests.post(compress_req, data=data)
+                    if cresp.status_code == 200:
+                        batch.state == 'finished'
+                    else:
+                        batch.state == 'failed'
+                    self.client.set(batch_key, pickle.dumps(batch))
+            except Exception:
+                logging.exception('failure in %s, continuing..' % batch_key)
         for job_key in self.client.keys('job-*'):
             try:
                 job = pickle.loads(self.client.get(job_key))
@@ -145,4 +148,4 @@ class JobMidwife(threading.Thread):
                     os.remove(fn)
                     logging.info('script should be running now, check kibana for messages')
             except Exception:
-                logging.exception('but not going to break our job midwife')
+                logging.exception('failure in %s, continuing...' % job_key)
