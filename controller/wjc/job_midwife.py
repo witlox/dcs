@@ -72,11 +72,11 @@ class JobMidwife(threading.Thread):
                     logging.info('detected finalized %s, compressing...' % batch_key)
                     data = json.dumps(batch.files)
                     compress_req = 'http://%s/store/compress/%s.zip' % (self.settings.web, batch_key)
-                    cresp = requests.post(compress_req, data=data, timeout=3600.0)
+                    cresp = requests.post(compress_req, data=data)
                     if cresp.status_code == 200:
-                        batch.state == 'finished'
+                        batch.state = 'finished'
                     else:
-                        batch.state == 'failed'
+                        batch.state = 'failed'
                     self.client.set(batch_key, pickle.dumps(batch))
             except Exception:
                 logging.exception('failure in %s, continuing..' % batch_key)
