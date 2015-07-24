@@ -72,7 +72,7 @@ class JobMidwife(threading.Thread):
                     logging.info('detected finalized %s, compressing...' % batch_key)
                     data = json.dumps(batch.files)
                     compress_req = 'http://%s/store/compress/%s.zip' % (self.settings.web, batch_key)
-                    cresp = requests.post(compress_req, data=data)
+                    cresp = requests.post(compress_req, data=data, timeout=3600.0)
                     if cresp.status_code == 200:
                         batch.state == 'finished'
                     else:
