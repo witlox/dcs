@@ -30,27 +30,28 @@ if args['action'] == 'upload':
     if not up_file.startswith('batch-') and not 'booted' in r.content:
         print 'current job state is %s' % r.content
         raise Exception('please wait till the machine has been booted before uploading')
-    with open(args['path'], 'rb') as data:
-        cstr = 'http://%s/store/%s' % (args['server'], file_name)
-        print 'calling %s' % cstr
-        headers = {'Content-Type': 'application/octet-stream'}
-        r = requests.post(cstr, data=data.read(), headers=headers)
-        if r.status_code != 200:
-            raise Exception('Status code not 200, %s' % r.content)
-        cstr = 'http://%s/wjc/jobs/%s/state/uploaded' % (args['server'], up_file)
-        print 'calling %s' % cstr
-        r = requests.post(cstr)
-        print 'upload done %s' % r
+    cstr = 'http://%s/store/%s' % (args['server'], file_name)
+    print 'calling %s' % cstr
+    r = requests.post(cstr, files={file_name: open(args['path'], 'rb')})
+    if r.status_code != 200:
+        raise Exception('Status code not 200, %s' % r.content)
+    cstr = 'http://%s/wjc/jobs/%s/state/uploaded' % (args['server'], up_file)
+    print 'calling %s' % cstr
+    r = requests.post(cstr)
+    print 'upload done %s' % r
 elif args['action'] == 'download':
     if not os.path.exists(directory):
         raise Exception('Directory does not exist ' + directory)
     cstr = 'http://%s/store/%s' % (args['server'], file_name)
     print 'calling %s' % cstr
-    r = requests.get(cstr)
+    r = requests.get(cstr, stream=True)
     if r.status_code != 200:
         raise Exception('Status code not 200, %s' % r.content)
     with open(args['path'], 'wb') as f:
-        f.write(r.content)
+        for chunk in r.iter_content(chunk_size=1024):
+            if chunk:
+                f.write(chunk)
+                f.flush()
     print 'download done to %s' % args['path']
 elif args['action'] == 'delete':
     cstr = 'http://%s/store/%s' % (args['server'], file_name)

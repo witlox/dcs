@@ -40,11 +40,14 @@ try:
     # go get our stuff
     r = requests.post('http://[web]/wjc/jobs/[uuid]/state/downloading')
     logging.info('downloading')
-    r = requests.get('http://[web]/store/[uuid].zip')
+    r = requests.get('http://[web]/store/[uuid].zip', stream=True)
     if r.status_code != 200:
         raise Exception('could not download [uuid].zip')
     with open('[uuid].zip', 'wb') as f:
-        f.write(r.content)
+        for chunk in r.iter_content(chunk_size=1024):
+            if chunk:
+                f.write(chunk)
+                f.flush()
     # extract to work dir
     os.mkdir('[uuid]')
     os.chdir('[uuid]')
@@ -92,11 +95,9 @@ try:
     r = requests.post('http://[web]/wjc/jobs/[uuid]/state/uploading')
     # remove old file on store
     r = requests.delete('http://[web]/store/[uuid].zip')
-    with open('../[uuid].zip', 'rb') as data:
-        headers = {'Content-Type': 'application/octet-stream'}
-        r = requests.post('http://[web]/store/[uuid].zip', data=data, headers=headers)
-        if r.status_code != 200:
-            raise Exception('could not upload results')
+    r = requests.post('http://[web]/store/[uuid].zip', files={'[uuid.zip]': open('../[uuid].zip', 'rb')})
+    if r.status_code != 200:
+        raise Exception('could not upload results')
     # finished
     if failure:
         r = requests.post('http://[web]/wjc/jobs/[uuid]/state/failed')

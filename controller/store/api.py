@@ -5,7 +5,7 @@ import zipfile
 from json import dumps
 from logging.config import dictConfig, logging
 from flask_autodoc import Autodoc
-from flask import Flask, request, jsonify, make_response, Response
+from flask import Flask, request, jsonify, make_response, Response, send_from_directory
 
 with open('logging.json') as jl:
     dictConfig(json.load(jl))
@@ -22,12 +22,12 @@ else:
 
 def __upload__(file_name):
     logging.info(file_name)
-    if request.headers['Content-Type'] == 'application/octet-stream':
-        path = os.path.join(app.config['settings'], file_name)
-        if os.path.exists(path):
-            raise ApplicationException('File (%s) already exists, will not overwrite' % file_name)
-        with open(path, 'wb') as f:
-            f.write(request.data)
+    path = os.path.join(app.config['settings'], file_name)
+    if os.path.exists(path):
+        raise ApplicationException('File (%s) already exists, will not overwrite' % file_name)
+    lfile = request.files[file_name]
+    if lfile:
+        lfile.save(path)
         return 'Upload received!'
     raise ApplicationException('No data in upload request')
 
@@ -36,12 +36,7 @@ def __download__(file_name):
     path = os.path.join(app.config['settings'], file_name)
     if not os.path.exists(path):
         raise ApplicationException('Requested file (%s) does not exist' % file_name)
-    with open(path, 'rb') as f:
-        response = make_response(path)
-        response.headers['Content-Type'] == 'application/octet-stream'
-        response.headers["Content-Disposition"] = "attachment; filename=%s" % file_name
-        response.data = f.read()
-    return response
+    return send_from_directory(app.config['settings'], file_name)
 
 def __deleter__(file_name):
     logging.info(file_name)
