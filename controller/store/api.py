@@ -92,11 +92,15 @@ def __compress__(pdata, file_name):
         os.mkdir(file_path)
         os.chdir(file_path)
         for name in file_names:
-            os.mkdir(os.path.splitext(name)[0])
-            os.chdir(os.path.splitext(name)[0])
-            with zipfile.ZipFile('../../%s.zip' % name) as zf:
-                zf.extractall()
-            os.chdir('..')
+            zn = '../%s.zip' % name
+            if os.path.exists(zn):
+                os.mkdir(os.path.splitext(name)[0])
+                os.chdir(os.path.splitext(name)[0])
+                with zipfile.ZipFile('../../%s.zip' % name) as zf:
+                    zf.extractall()
+                os.chdir('..')
+            else:
+                logging.warning('could not find %s' % zn)
         shutil.make_archive('../%s' % os.path.splitext(file_name)[0], 'zip')
         os.chdir('..')
         shutil.rmtree(os.path.splitext(file_name)[0])
