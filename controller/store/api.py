@@ -13,6 +13,10 @@ with open('logging.json') as jl:
 app = Flask(__name__)
 auto = Autodoc(app)
 
+cache = False
+if os.environ.has_key('cache'):
+    cache = True
+
 if os.environ.has_key('store'):
     app.config['settings'] = os.environ['store']
 else:
@@ -98,8 +102,9 @@ def __compress__(pdata, file_name):
         shutil.rmtree(os.path.splitext(file_name)[0])
         for name in file_names:
             fp = os.path.join(app.config['settings'], '%s.zip' % name)
-            if os.path.exists(fp):
-                os.remove(fp)
+            if not cache:
+                if os.path.exists(fp):
+                    os.remove(fp)
         return Response('ok')
     except Exception:
         logging.exception('error during compress of %s' % file_name)
