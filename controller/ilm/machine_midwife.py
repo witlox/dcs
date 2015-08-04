@@ -26,7 +26,7 @@ class MachineMidwife(threading.Thread):
         logging.info('sending midwife home')
 
     def check_newborn(self):
-        logging.info('checking for machine updates')
+        logging.debug('checking for machine updates')
         for worker_id in self.client.keys('jm-*'):
             try:
                 worker = pickle.loads(self.client.get(worker_id))

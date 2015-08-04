@@ -101,15 +101,17 @@ def __compress__(pdata, file_name):
                 os.chdir('..')
             else:
                 logging.warning('could not find %s' % zn)
-        shutil.make_archive('../%s' % os.path.splitext(file_name)[0], 'zip')
+        res = shutil.make_archive('../%s' % os.path.splitext(file_name)[0], 'zip')
         os.chdir('..')
-        shutil.rmtree(os.path.splitext(file_name)[0])
-        for name in file_names:
-            fp = os.path.join(app.config['settings'], '%s.zip' % name)
+        if res is not None and os.path.exists('%s.zip' % os.path.splitext(file_name)[0]):
+            shutil.rmtree(os.path.splitext(file_name)[0])
             if not cache:
-                if os.path.exists(fp):
-                    os.remove(fp)
-        return Response('ok')
+                for name in file_names:
+                    fp = os.path.join(app.config['settings'], '%s.zip' % name)
+                    if os.path.exists(fp):
+                        os.remove(fp)
+            return Response('ok')
+        raise ApplicationException('archive %s.zip not created!' % os.path.splitext(file_name)[0])
     except Exception:
         logging.exception('error during compress of %s' % file_name)
         raise ApplicationException('error during compress of %s' % file_name)

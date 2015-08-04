@@ -32,7 +32,7 @@ class JobMidwife(threading.Thread):
         logging.info('sending midwife home')
 
     def check_newborn(self):
-        logging.info('checking for job updates')
+        logging.debug('checking for job updates')
         for batch_key in self.client.keys('batch-*'):
             try:
                 batch = pickle.loads(self.client.get(batch_key))
