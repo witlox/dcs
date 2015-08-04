@@ -13,7 +13,7 @@ dictConfig({
     'version': 1,
     'disable_existing_loggers': False,
     'formatters': {
-        'standard': {'format': '[ILM]-%(asctime)s[%(levelname)s]%(funcName)s:%(message)s',
+        'standard': {'format': '%(asctime)s[%(levelname)s]%(funcName)s:%(message)s',
                      'datefmt': '%Y-%m-%d %H:%M:%S'},
         'logstash': {'format': '[%(levelname)s][uuid]:%(message)s'}
     },
@@ -53,7 +53,7 @@ try:
     os.chdir('[uuid]')
     # unzip the file
     r = requests.post('http://[web]/wjc/jobs/[uuid]/state/extracting')
-    with zipfile.ZipFile('../[uuid].zip') as zf:
+    with zipfile.ZipFile('../[uuid].zip', allowZip64=True) as zf:
         zf.extractall()
     # reset permissions
     for root, dirs, files in os.walk('.'):
@@ -90,12 +90,17 @@ try:
     # zip the results
     r = requests.post('http://[web]/wjc/jobs/[uuid]/state/compressing')
     os.remove('../[uuid].zip')
-    shutil.make_archive('../[uuid]', 'zip')
+    with zipfile.ZipFile('../[uuid].zip', 'w', compression=zipfile.ZIP_DEFLATED, allowZip64=True) as ozf:
+        for dir_path, dir_names, file_names in os.walk('.'):
+            for fname in file_names:
+                path = os.path.normpath(os.path.join(dir_path, fname))
+                if os.path.isfile(path):
+                    ozf.write(path, path)
     # upload the results
     r = requests.post('http://[web]/wjc/jobs/[uuid]/state/uploading')
     # remove old file on store
     r = requests.delete('http://[web]/store/[uuid].zip')
-    r = requests.post('http://[web]/store/[uuid].zip', files={'[uuid.zip]': open('../[uuid].zip', 'rb')})
+    r = requests.post('http://[web]/store/[uuid].zip', files={'[uuid].zip': open('../[uuid].zip', 'rb')})
     if r.status_code != 200:
         raise Exception('could not upload results')
     # finished

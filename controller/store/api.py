@@ -13,9 +13,6 @@ with open('logging.json') as jl:
 app = Flask(__name__)
 auto = Autodoc(app)
 
-cache = False
-if os.environ.has_key('cache'):
-    cache = True
 
 if os.environ.has_key('store'):
     app.config['settings'] = os.environ['store']
@@ -29,11 +26,12 @@ def __upload__(file_name):
     path = os.path.join(app.config['settings'], file_name)
     if os.path.exists(path):
         raise ApplicationException('File (%s) already exists, will not overwrite' % file_name)
-    lfile = request.files[file_name]
-    if lfile:
-        lfile.save(path)
-        return 'Upload received!'
-    raise ApplicationException('No data in upload request')
+    with open(path, 'wb') as f:
+        for chunk in request.iter_content(chunk_size=1024):
+            if chunk:
+                f.write(chunk)
+                f.flush()
+    return 'Upload received!'
 
 def __download__(file_name):
     logging.info(file_name)
@@ -67,11 +65,18 @@ def __extract__(file_name):
             shutil.rmtree(file_path)
         os.mkdir(file_path)
         os.chdir(file_path)
-        with zipfile.ZipFile('../%s' % file_name) as zf:
+        with zipfile.ZipFile('../%s' % file_name, allowZip64=True) as zf:
             zf.extractall()
         created = []
         for d in next(os.walk('.'))[1]:
-            shutil.make_archive('../job-%s' % d, 'zip', d)
+            os.chdir(d)
+            with zipfile.ZipFile('../../job-%s.zip' % d, 'w', compression=zipfile.ZIP_DEFLATED, allowZip64=True) as zf:
+                for dir_path, dir_names, file_names in os.walk('.'):
+                    for name in file_names:
+                        path = os.path.normpath(os.path.join(dir_path, name))
+                        if os.path.isfile(path):
+                            zf.write(path, path)
+            os.chdir('..')
             created.append('job-%s' % str(d))
         os.chdir('..')
         shutil.rmtree(os.path.splitext(file_name)[0])
@@ -96,20 +101,22 @@ def __compress__(pdata, file_name):
             if os.path.exists(zn):
                 os.mkdir(os.path.splitext(name)[0])
                 os.chdir(os.path.splitext(name)[0])
-                with zipfile.ZipFile('../../%s.zip' % name) as zf:
+                with zipfile.ZipFile('../../%s.zip' % name, allowZip64=True) as zf:
                     zf.extractall()
+                os.remove('../../%s.zip' % name)
                 os.chdir('..')
             else:
+                os.mkdir('%s_failed' % os.path.splitext(name)[0])
                 logging.warning('could not find %s' % zn)
-        res = shutil.make_archive('../%s' % os.path.splitext(file_name)[0], 'zip')
+        with zipfile.ZipFile('../%s.zip' % os.path.splitext(file_name)[0], 'w', compression=zipfile.ZIP_DEFLATED, allowZip64=True) as ozf:
+            for dir_path, dir_names, files in os.walk('.'):
+                for fname in files:
+                    path = os.path.normpath(os.path.join(dir_path, fname))
+                    if os.path.isfile(path):
+                        ozf.write(path, path)
         os.chdir('..')
-        if res is not None and os.path.exists('%s.zip' % os.path.splitext(file_name)[0]):
+        if os.path.exists('%s.zip' % os.path.splitext(file_name)[0]) and os.path.getsize('%s.zip' % os.path.splitext(file_name)[0]) > 0:
             shutil.rmtree(os.path.splitext(file_name)[0])
-            if not cache:
-                for name in file_names:
-                    fp = os.path.join(app.config['settings'], '%s.zip' % name)
-                    if os.path.exists(fp):
-                        os.remove(fp)
             return Response('ok')
         raise ApplicationException('archive %s.zip not created!' % os.path.splitext(file_name)[0])
     except Exception:
