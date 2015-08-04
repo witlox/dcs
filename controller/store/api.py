@@ -27,10 +27,13 @@ def __upload__(file_name):
     if os.path.exists(path):
         raise ApplicationException('File (%s) already exists, will not overwrite' % file_name)
     with open(path, 'wb') as f:
-        for chunk in request.iter_content(chunk_size=1024):
-            if chunk:
-                f.write(chunk)
-                f.flush()
+        chunk_size=1024
+        while True:
+            chunk = request.stream.read(chunk_size)
+            if len(chunk) == 0:
+                break
+            f.write(chunk)
+            f.flush()
     return 'Upload received!'
 
 def __download__(file_name):
