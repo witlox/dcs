@@ -32,9 +32,10 @@ if args['action'] == 'upload':
         raise Exception('please wait till the machine has been booted before uploading')
     cstr = 'http://%s/store/%s' % (args['server'], file_name)
     print 'calling %s' % cstr
-    r = requests.post(cstr, files={file_name: open(args['path'], 'rb')})
-    if r.status_code != 200:
-        raise Exception('Status code not 200, %s' % r.content)
+    with open(args['path'], 'rb') as f:
+        r = requests.post(cstr, data=f)
+        if r.status_code != 200:
+            raise Exception('Status code not 200, %s' % r.content)
     cstr = 'http://%s/wjc/jobs/%s/state/uploaded' % (args['server'], up_file)
     print 'calling %s' % cstr
     r = requests.post(cstr)

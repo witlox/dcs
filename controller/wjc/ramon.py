@@ -100,9 +100,10 @@ try:
     r = requests.post('http://[web]/wjc/jobs/[uuid]/state/uploading')
     # remove old file on store
     r = requests.delete('http://[web]/store/[uuid].zip')
-    r = requests.post('http://[web]/store/[uuid].zip', files={'[uuid].zip': open('../[uuid].zip', 'rb')})
-    if r.status_code != 200:
-        raise Exception('could not upload results')
+    with open('../[uuid].zip', 'rb') as f:
+        r = requests.post('http://[web]/store/[uuid].zip', data=f)
+        if r.status_code != 200:
+            raise Exception('could not upload results')
     # finished
     if failure:
         r = requests.post('http://[web]/wjc/jobs/[uuid]/state/failed')
