@@ -19,6 +19,8 @@ class TestIlm(unittest.TestCase):
         self.aws_mock = mock.MagicMock()
         modules = {
             'aws': self.aws_mock,
+            'paramiko' : mock.MagicMock(),
+            'requests' : mock.MagicMock(),
             'json': mock.MagicMock(),
             'logging.config': mock.MagicMock(),
             'redis': mock.MagicMock()

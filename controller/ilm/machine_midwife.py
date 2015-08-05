@@ -1,9 +1,12 @@
 from datetime import datetime, timedelta
+import json
 import logging
 import threading
 from time import sleep
+import paramiko
 import aws
 import pickle
+import requests
 from settings import Settings
 
 
@@ -55,6 +58,28 @@ class MachineMidwife(threading.Thread):
                         logging.error('Could not remove worker %s, remove manually!' % worker.instance)
                     self.client.delete(worker_id)
                 elif worker.instance is not None and job.state == 'failed':
+                    r = requests.get('http://%s/store/files' % self.settings.web)
+                    job_zip = '%s.zip' % worker.job_id
+                    if job_zip not in r.content:
+                        logging.warning('could not find %s output in store, trying to rescue output' % worker.job_id)
+                        ssh = paramiko.SSHClient()
+                        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                        ami_req = 'http://%s/ilm/ami/%s' % (self.settings.web, job.ami)
+                        logging.info('retrieving AMI settings from %s' % ami_req)
+                        r_ami = requests.get(ami_req)
+                        data = pickle.loads(json.loads(r_ami.content))
+                        username = data[0]
+                        key_file = data[1]
+                        with open('%s.key' % worker.job_id, 'wb') as hairy:
+                            hairy.write(key_file)
+                        logging.info('establishing connection to %s using user %s' % (worker.ip_address, username))
+                        ssh.connect(hostname=worker.ip_address, username=username, key_filename='%s.key' % worker.job_id)
+                        sftp = ssh.open_sftp()
+                        dest = '%s/%s' % (self.settings.recovery_path, job_zip)
+                        sftp.get(job_zip, dest)
+                        sftp.close()
+                        ssh.close()
+                        logging.info('rescued results for %s, saved to %s' % (worker.job_id, dest))
                     if self.settings.aws_auto_remove_failed:
                         logging.info('autoremove on failure enabled, trying to remove %s' % worker.instance)
                         result = aws.terminate_machine(worker.instance)

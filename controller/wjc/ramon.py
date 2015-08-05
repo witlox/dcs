@@ -111,6 +111,6 @@ try:
     else:
         r = requests.post('http://[web]/wjc/jobs/[uuid]/state/finished')
         logging.info('job [uuid] done')
-except Exception:
-    logging.exception('Failed to complete work')
+except Exception, e:
+    logging.exception('Failed to complete work %s' % e.message)
     r = requests.post('http://[web]/wjc/jobs/[uuid]/state/failed')

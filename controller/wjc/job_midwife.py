@@ -143,6 +143,7 @@ class JobMidwife(threading.Thread):
                         logging.info('%s output: %s' % (job_key, output))
                     if error:
                         logging.error('%s error: %s' % (job_key, error))
+                    sftp.close()
                     ssh.close()
                     os.remove('%s.key' % job_key)
                     os.remove(fn)
