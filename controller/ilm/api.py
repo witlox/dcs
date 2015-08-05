@@ -1,3 +1,4 @@
+import os
 import aws
 from flask import Flask, request, jsonify, Response
 from flask.json import dumps
@@ -9,6 +10,9 @@ app = Flask(__name__)
 auto = Autodoc(app)
 
 app.config['REPOSITORY'] = AmiRepository()
+
+if not os.path.exists('/tmp/store'):
+    os.mkdir('/tmp/store')
 
 def __get_amis__():
     repository = app.config['REPOSITORY']

@@ -11,7 +11,7 @@ docker run -p 5601:5601 --name kibana --link elasticsearch:elasticsearch -d kiba
 # start the file store (mount a local volume that will store the intermediate files)
 docker run --name store -v /tmp/store:/tmp/store -d witlox/store
 # start uwsgi containers with overwritten config and mounted apps (ports 6000 & 7000)
-docker run --name ilm --link db:db --link logstash:logstash -v $(pwd)/ilm.conf:/var/www/app/ilm.conf:ro -d witlox/ilm
+docker run --name ilm --link db:db --link logstash:logstash -v /tmp/store:/tmp/store -v $(pwd)/ilm.conf:/var/www/app/ilm.conf:ro -d witlox/ilm
 docker run --name wjc --link db:db --link logstash:logstash -v $(pwd)/wjc.conf:/var/www/app/wjc.conf:ro -d witlox/wjc
 # start nginx with the overwritten default site (port 80)
 docker run -p 80:80 --name web --link kibana:kibana --link ilm:ilm --link wjc:wjc --link store:store -v $(pwd)/nginx.conf:/etc/nginx/nginx.conf:ro -d nginx

@@ -1,12 +1,11 @@
 from datetime import datetime, timedelta
-import json
 import logging
 import threading
 from time import sleep
-import paramiko
-import aws
 import pickle
+import paramiko
 import requests
+import aws
 from settings import Settings
 
 
@@ -76,8 +75,8 @@ class MachineMidwife(threading.Thread):
                             sftp.close()
                             ssh.close()
                             logging.info('rescued results for %s, saved to %s' % (worker.job_id, dest))
-                        except Exception:
-                            logging.exception('could not recover results for %s' % worker.job_id)
+                        except Exception, e:
+                            logging.exception('could not recover results for %s (%s)' % (worker.job_id, e.message))
                     if self.settings.aws_auto_remove_failed:
                         logging.info('autoremove on failure enabled, trying to remove %s' % worker.instance)
                         result = aws.terminate_machine(worker.instance)

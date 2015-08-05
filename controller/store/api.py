@@ -13,13 +13,9 @@ with open('logging.json') as jl:
 app = Flask(__name__)
 auto = Autodoc(app)
 
-
-if os.environ.has_key('store'):
-    app.config['settings'] = os.environ['store']
-else:
-    if not os.path.exists('/tmp/store'):
-        os.mkdir('/tmp/store')
-    app.config['settings'] = '/tmp/store'
+if not os.path.exists('/tmp/store'):
+    os.mkdir('/tmp/store')
+app.config['settings'] = '/tmp/store'
 
 def __upload__(file_name):
     logging.info(file_name)
