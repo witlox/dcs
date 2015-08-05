@@ -57,7 +57,7 @@ class MachineMidwife(threading.Thread):
                         logging.error('Could not remove worker %s, remove manually!' % worker.instance)
                     self.client.delete(worker_id)
                 elif worker.instance is not None and job.state == 'failed':
-                    r = requests.get('http://%s/store/files' % self.settings.web)
+                    r = requests.get('http://%s/store/files/' % self.settings.web)
                     job_zip = '%s.zip' % worker.job_id
                     if job_zip not in r.content:
                         try:
