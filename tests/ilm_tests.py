@@ -242,14 +242,14 @@ class TestIlm(unittest.TestCase):
         worker.instance = 'instance'
         worker.request_time = datetime.now()-timedelta(hours=1, milliseconds=1)
         worker.ip_address = None
-        midwife.client.get.side_effect = [pickle.dumps(worker), pickle.dumps(Job('failed'))]
+        midwife.client.get.side_effect = [pickle.dumps(worker), pickle.dumps(Job('failed')), pickle.dumps(['test', 'aaa'])]
         midwife.client.set = mock.MagicMock()
         midwife.client.publish = mock.MagicMock()
 
         midwife.check_newborn()
 
         assert midwife.client.keys.call_count == 1
-        assert midwife.client.get.call_count == 2
+        assert midwife.client.get.call_count == 3
         assert self.aws_mock.terminate_machine.call_count == 0
 
 if __name__ == '__main__':
