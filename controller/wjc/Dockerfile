@@ -3,6 +3,6 @@ FROM lbracken/flask-uwsgi
 
 MAINTAINER Pim Witlox <pim.witlox@deltares.nl>
 
-CMD ["uwsgi", "--socket", ":7000", "--module", "api", "--callable", "app", "4"]
+CMD ["uwsgi", "--socket", ":7000", "--module", "api", "--callable", "app", "--processes", "4"]
 
 EXPOSE 7000
