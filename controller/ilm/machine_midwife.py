@@ -70,7 +70,7 @@ class MachineMidwife(threading.Thread):
                             logging.info('establishing connection to %s using user %s' % (worker.ip_address, username))
                             ssh.connect(hostname=worker.ip_address, username=username, key_filename='%s.key' % worker.job_id)
                             sftp = ssh.open_sftp()
-                            dest = '%s/%s' % (self.settings.recovery_path, job_zip)
+                            dest = '/tmp/store/%s' % job_zip
                             sftp.get(job_zip, dest)
                             sftp.close()
                             ssh.close()

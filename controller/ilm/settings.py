@@ -19,5 +19,4 @@ class Settings:
         self.aws_access = parser.get('aws', 'access_key')
         self.aws_seqgrp = parser.get('aws', 'security_group')
         self.aws_auto_remove_failed = parser.getboolean('aws', 'auto_remove_failed')
-        self.recovery_path = parser.get('parameters', 'recovery_path')
         self.web = parser.get('parameters', 'web')
