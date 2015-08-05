@@ -65,12 +65,7 @@ class MachineMidwife(threading.Thread):
                             logging.warning('could not find %s output in store, trying to rescue output' % worker.job_id)
                             ssh = paramiko.SSHClient()
                             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                            ami_req = 'http://%s/ilm/ami/%s' % (self.settings.web, job.ami)
-                            logging.info('retrieving AMI settings from %s' % ami_req)
-                            r_ami = requests.get(ami_req)
-                            data = pickle.loads(json.loads(r_ami.content))
-                            username = data[0]
-                            key_file = data[1]
+                            username, key_file = self.client.get(job.ami)
                             with open('%s.key' % worker.job_id, 'wb') as hairy:
                                 hairy.write(key_file)
                             logging.info('establishing connection to %s using user %s' % (worker.ip_address, username))
