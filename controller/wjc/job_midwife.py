@@ -12,6 +12,7 @@ import paramiko
 from settings import Settings
 from job import Job
 
+from ftp_util import sync
 
 class JobMidwife(threading.Thread):
     def __init__(self, client):
@@ -32,121 +33,112 @@ class JobMidwife(threading.Thread):
         logging.info('sending midwife home')
 
     def check_newborn(self):
+        self.sense_blubberies()
         logging.debug('checking for job updates')
+        for job_key in self.client.keys('job-*'):
+            try:
+                job = pickle.loads(self.client.get(job_key))
+                if job.state != 'booted':
+                    continue
+                worker = None
+                for worker_key in self.client.keys('jm-*'):
+                    temp_worker = pickle.loads(self.client.get(worker_key))
+                    if temp_worker.job_id == job_key:
+                        worker = temp_worker
+                if worker.ip_address is None:
+                    raise Exception('Could not determine IP address for worker/job %s' % job_key)
+                # check if state is ok
+                ami_status = requests.get('http://%s/ilm/ami/%s/status' % (self.settings.web, worker.instance))
+                if 'status:ok' not in ami_status.content.lower():
+                    logging.info('AMI (%s) status (%s) NOK, waiting...' % (worker.instance, ami_status.content))
+                    continue
+                logging.info('found job to transmit to worker %s, preparing script' % job_key)
+                ramon = None
+                with open('ramon.py', 'r') as r:
+                    ramon = r.read()
+                ramon = ramon.replace('[web]', self.settings.web)
+                ramon = ramon.replace('[elk]', self.settings.elk)
+                ramon = ramon.replace('[uuid]', job_key)
+                ramon_file = '%s.sh' % job_key
+                with open(ramon_file, 'w') as smooth:
+                    smooth.writelines(ramon)
+                st_fn = os.stat(ramon_file)
+                os.chmod(ramon_file, st_fn.st_mode | stat.S_IEXEC)
+                logging.info('script %s prepared' % ramon_file)
+                # fish ami
+                ami_req = 'http://%s/ilm/ami/%s' % (self.settings.web, job.ami)
+                logging.info('retrieving AMI settings from %s' % ami_req)
+                r_ami = requests.get(ami_req)
+                data = pickle.loads(json.loads(r_ami.content))
+                username = data[0]
+                key_file = data[1]
+                with paramiko.SSHClient() as ssh:
+                    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                    logging.info('establishing connection to %s using user %s' % (worker.ip_address, username))
+                    ssh.connect(hostname=worker.ip_address, username=username, pkey=key_file)
+                    with ssh.open_sftp() as sftp:
+                        luke = '/tmp/store/%s/%s' % (job.batch, job_key)
+                        sync(sftp, luke, job_key, download=False, delete=True)
+                        sftp.put(ramon_file, ramon_file)
+                        ssh.exec_command('chmod +x %s' % ramon_file)
+                        start = 'virtualenv venv\nsource venv/bin/activate\npip install python-logstash requests\nnohup ./%s  > /dev/null 2>&1 &\n' % ramon_file
+                        logging.info('calling remote start with %s' % start)
+                        _, out, err = ssh.exec_command(start)
+                        output = out.readlines()
+                        error = err.readlines()
+                        if output:
+                            logging.info('%s output: %s' % (job_key, output))
+                        if error:
+                            logging.error('%s error: %s' % (job_key, error))
+                            requests.post('http://%s/wjc/jobs/%s/state/failed' % (self.settings.web, job_key))
+                os.remove(ramon_file)
+            except Exception, e:
+                logging.exception('failure in %s (%s), continuing...' % (job_key, e))
+
+    def sense_blubberies(self):
         for batch_key in self.client.keys('batch-*'):
             try:
                 batch = pickle.loads(self.client.get(batch_key))
                 if batch.state == 'uploaded':
-                    logging.info('detected uploaded %s' % batch_key)
-                    extract_req = 'http://%s/store/extract/%s.zip' % (self.settings.web, batch_key)
-                    extract_resp = requests.get(extract_req)
-                    batch.files = json.loads(extract_resp.content)
-                    batch.state = 'extracted'
-                    self.client.set(batch_key, pickle.dumps(batch))
-                elif batch.state == 'extracted':
-                    finished = 0
-                    current = 0
-                    for job_file in batch.files:
-                        if job_file in self.client.keys('job-*'):
-                            job = pickle.loads(self.client.get(job_file))
-                            if job.state != 'finished' and job.state != 'failed':
-                                current += 1
-                            else:
-                                finished += 1
-                    logging.info("currently running %d jobs and finished %d jobs of %d total jobs in %s" % (current, finished, len(batch.files), batch_key))
-                    if finished == len(batch.files):
-                        logging.info('all batch jobs have been completed, finalizing')
-                        batch.state = 'compressing'
+                    if len(batch.jobs) == 0:
+                        batch.jobs.extend(os.listdir('/tmp/store/%s' % batch_key))
                         self.client.set(batch_key, pickle.dumps(batch))
-                        continue
-                    for job_file in batch.files:
-                        if job_file not in self.client.keys('job-*') and current < batch.max_nodes:
-                            logging.info('detected empty slot (%d/%d) for %s, creating job' % (current, batch.max_nodes, batch_key))
-                            job = Job('received')
+                        for job_id in batch.jobs:
+                            job = Job('spawned')
                             job.ami = batch.ami
                             job.instance_type = batch.instance_type
-                            self.client.set(job_file, pickle.dumps(job))
-                            self.client.publish('jobs', job_file)
-                            current += 1
-                elif batch.state == 'compressing':
-                    logging.info('detected finalized %s, compressing...' % batch_key)
-                    data = json.dumps(batch.files)
-                    compress_req = 'http://%s/store/compress/%s.zip' % (self.settings.web, batch_key)
-                    cresp = requests.post(compress_req, data=data)
-                    if cresp.status_code == 200:
+                            job.batch = batch_key
+                            self.client.set(job_id, pickle.dumps(job))
+                            self.client.publish('jobs', job_id)
+                    finished = 0
+                    current = 0
+                    for job_id in batch.jobs:
+                        if self.client.exists(job_id):
+                            job = pickle.loads(self.client.get(job_id))
+                            if job.state == 'running':
+                                current += 1
+                            elif job.state == 'finished' and job.state != 'failed':
+                                finished += 1
+                    logging.info("currently running %d jobs and finished %d jobs of %d total jobs in %s" % (current, finished, len(batch.jobs), batch_key))
+                    if finished == len(batch.jobs):
+                        failures = 0
+                        for job_id in batch.jobs:
+                            if self.client.exists(job_id):
+                                job = pickle.loads(self.client.get(job_id))
+                                if job.state == 'failed':
+                                    failures += 1
+                        logging.info('all batch jobs have been completed, (%d failures)' % failures)
                         batch.state = 'finished'
-                    else:
-                        batch.state = 'failed'
-                    self.client.set(batch_key, pickle.dumps(batch))
-            except Exception:
-                logging.exception('failure in %s, continuing..' % batch_key)
-        for job_key in self.client.keys('job-*'):
-            try:
-                job = pickle.loads(self.client.get(job_key))
-                # check jobs that have been created by batch, get part by extract, not upload
-                if job.state == 'booted':
-                    for batch_key in self.client.keys('batch-*'):
-                        batch = pickle.loads(self.client.get(batch_key))
-                        if batch.state == 'extracted' and job_key in batch.files:
-                            job.state = 'uploaded'
-                            self.client.set(job_key, pickle.dumps(job))
-                if job.state == 'uploaded':
-                    # fish ip
-                    ip = None
-                    for worker_key in self.client.keys('jm-*'):
-                        worker = pickle.loads(self.client.get(worker_key))
-                        if worker.job_id == job_key:
-                            ip = worker.ip_address
-                    if ip is None:
-                        raise Exception('Could not determine IP address for worker/job %s' % job_key)
-                    # check if state is ok
-                    ami_stat = 'http://%s/ilm/ami/%s/status' % (self.settings.web, worker.instance)
-                    r_stat = requests.get(ami_stat)
-                    if not 'status:ok' in r_stat.content.lower():
-                        logging.info('AMI (%s) status (%s) NOK, waiting...' % (worker.instance, r_stat.content))
+                        self.client.set(batch_key, pickle.dumps(batch))
                         continue
-                    logging.info('found job to transmit to worker %s, preparing script' % job_key)
-                    ramon = None
-                    with open('ramon.py', 'r') as r:
-                        ramon = r.read()
-                    ramon = ramon.replace('[web]', self.settings.web)
-                    ramon = ramon.replace('[elk]', self.settings.elk)
-                    ramon = ramon.replace('[uuid]', job_key)
-                    fn = '%s.sh' % job_key
-                    with open(fn, 'w') as smooth:
-                        smooth.writelines(ramon)
-                    st_fn = os.stat(fn)
-                    os.chmod(fn, st_fn.st_mode | stat.S_IEXEC)
-                    logging.info('script %s prepared' % fn)
-                    ssh = paramiko.SSHClient()
-                    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                    # fish ami
-                    ami_req = 'http://%s/ilm/ami/%s' % (self.settings.web, job.ami)
-                    logging.info('retrieving AMI settings from %s' % ami_req)
-                    r_ami = requests.get(ami_req)
-                    data = pickle.loads(json.loads(r_ami.content))
-                    username = data[0]
-                    key_file = data[1]
-                    with open('%s.key' % job_key, 'wb') as hairy:
-                        hairy.write(key_file)
-                    logging.info('establishing connection to %s using user %s' % (ip, username))
-                    ssh.connect(hostname=ip, username=username, key_filename='%s.key' % job_key)
-                    sftp = ssh.open_sftp()
-                    sftp.put(fn, fn)
-                    ssh.exec_command('chmod +x %s' % fn)
-                    start = 'virtualenv venv\nsource venv/bin/activate\npip install python-logstash requests\nnohup ./%s  > /dev/null 2>&1 &\n' % fn
-                    logging.info('calling remote start with %s' % start)
-                    _, out, err = ssh.exec_command(start)
-                    output = out.readlines()
-                    error = err.readlines()
-                    if output:
-                        logging.info('%s output: %s' % (job_key, output))
-                    if error:
-                        logging.error('%s error: %s' % (job_key, error))
-                    sftp.close()
-                    ssh.close()
-                    os.remove('%s.key' % job_key)
-                    os.remove(fn)
-                    logging.info('script should be running now, check kibana for messages')
-            except Exception:
-                logging.exception('failure in %s, continuing...' % job_key)
+                    for job_id in batch.jobs:
+                        if self.client.exists(job_id):
+                            job = pickle.loads(self.client.get(job_id))
+                            if job.state == 'spawned' and current < batch.max_nodes:
+                                logging.info('detected empty slot (%d/%d) for %s, creating job' % (current, batch.max_nodes, batch_key))
+                                job.state = 'received'
+                                self.client.set(job_id, pickle.dumps(job))
+                                self.client.publish('jobs', job_id)
+                                current += 1
+            except Exception, e:
+                logging.exception('failure in %s (%s), continuing..' % (batch_key, e))

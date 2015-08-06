@@ -18,5 +18,6 @@ class Settings:
         self.aws_secret = parser.get('aws', 'secret_key')
         self.aws_access = parser.get('aws', 'access_key')
         self.aws_seqgrp = parser.get('aws', 'security_group')
-        self.aws_auto_remove_failed = parser.getboolean('aws', 'auto_remove_failed')
-        self.web = parser.get('parameters', 'web')
+        self.aws_req_max_wait = parser.get('aws', 'request_max_wait_time')
+        self.auto_remove_failed = parser.getboolean('parameters', 'auto_remove_failed')
+        self.recycle_workers = parser.getboolean('parameters', 'recycle_workers')

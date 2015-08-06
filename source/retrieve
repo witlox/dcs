@@ -1,0 +1,31 @@
+#!/usr/bin/env python
+
+import argparse
+import os
+
+import paramiko
+
+from ftp_util import sync
+
+parser = argparse.ArgumentParser(description='retrieve a directory from the store')
+
+parser.add_argument('server', help='specifiy the webserver address')
+parser.add_argument('username', help='specifiy username for connecting with the server')
+parser.add_argument('key_file', help='specifiy key file for connecting with the server')
+parser.add_argument('batch_id', help='batch to download')
+parser.add_argument('path', help='path to download to')
+
+args = parser.parse_args()
+
+args = args.__dict__
+
+if not os.path.isdir(args['path']):
+    raise Exception('Directory does not exist ' + args['path'])
+with paramiko.SSHClient() as ssh:
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    ssh.connect(hostname=args['server'], username=args['username'], key_filename=args['key_file'])
+    with ssh.open_sftp() as sftp:
+        sync(sftp, args['batch_id'], args['path'])
+for directory in os.listdir(args['path']):
+    os.rename(os.path.join(args['path'], directory), os.path.join(args['path'], directory[4:]))
+print 'download done to %s' % args['path']

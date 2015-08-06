@@ -6,4 +6,5 @@ class Job:
     state = None
     ami = None
     instance_type = None
+    batch_id = None
 

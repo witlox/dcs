@@ -34,8 +34,8 @@ def start_machine(ami, instance):
         )
         logging.info('Reservation %s for worker %s' % (reservation.id, worker_id))
         return worker_id, reservation.id
-    except Exception:
-        logging.exception('Cannot reserve instance %s for type %s' % (ami, instance))
+    except Exception, e:
+        logging.exception('Cannot reserve instance %s for type %s (%s)' % (ami, instance, e))
         return None
 
 def terminate_machine(instance_id):
@@ -50,8 +50,8 @@ def terminate_machine(instance_id):
         terminated = ec2.terminate_instances([instance_id])
         logging.info('Succesfully terminated %d instances' % (len(terminated)))
         return terminated
-    except Exception:
-        logging.exception('Cannot terminate instance %s' % instance_id)
+    except Exception,e :
+        logging.exception('Cannot terminate instance %s (%s)' % (instance_id, e))
         return None
 
 def my_booted_machine(reservation_id):
@@ -67,8 +67,8 @@ def my_booted_machine(reservation_id):
         reservation = [r for r in reservations if r.id == reservation_id]
         if len(reservation) > 0 and len(reservation[0].instances) > 0:
             return reservation[0].instances[0].id, reservation[0].instances[0].ip_address
-    except Exception:
-        logging.exception('Could not get reservations for %s' % reservation_id)
+    except Exception,e :
+        logging.exception('Could not get reservations for %s (%s)' % (reservation_id, e))
     return None, None
 
 def get_status(instance_id):
@@ -85,6 +85,6 @@ def get_status(instance_id):
             logging.info('current %s status: %s' % (instance_id, statuses[0].system_status))
             return statuses[0].system_status
         return None
-    except Exception:
-        logging.exception('Could not get status for %s' % instance_id)
+    except Exception, e:
+        logging.exception('Could not get status for %s (%s)' % (instance_id, e))
     return None

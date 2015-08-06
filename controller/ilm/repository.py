@@ -23,8 +23,8 @@ class AmiRepository(threading.Thread):
             self.midwife = MachineMidwife(self.client)
             self.midwife.start()
             self.start()
-        except Exception:
-            logging.exception('Cannot connect with the database server')
+        except Exception, e:
+            logging.exception('Problem instantiating ami repository (%s)' % e)
 
     def get_all_amis(self):
         return self.client.keys('ami*')
@@ -61,10 +61,16 @@ class AmiRepository(threading.Thread):
         if self.client.exists(job_id):
             job = pickle.loads(self.client.get(job_id))
             if job.state == 'received':
+                for worker_id in self.client.keys('jm-*'):
+                    existing_worker = pickle.loads(self.client.get(worker_id))
+                    if existing_worker.batch_id == job.batch_id and existing_worker.job_id is None:
+                        job.state = 'requested'
+                        existing_worker.job_id = job_id
+                        self.client.set(worker_id, pickle.dumps(existing_worker))
                 worker_id, reservation = aws.start_machine(job.ami, job.instance_type)
                 if worker_id:
                     job.state = 'requested'
-                    worker = Worker(job_id)
+                    worker = Worker(job_id, job.batch_id)
                     worker.request_time = datetime.now()
                     worker.reservation = reservation
                     self.client.set(worker_id, pickle.dumps(worker))

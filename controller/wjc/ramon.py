@@ -2,12 +2,11 @@
 
 import io
 import os
-import requests
 import stat
 import subprocess
-import zipfile
-import shutil
 from logging.config import dictConfig, logging
+
+import requests
 
 dictConfig({
     'version': 1,
@@ -37,31 +36,9 @@ dictConfig({
 })
 
 try:
-    # go get our stuff
-    r = requests.post('http://[web]/wjc/jobs/[uuid]/state/downloading')
-    logging.info('downloading')
-    r = requests.get('http://[web]/store/[uuid].zip', stream=True)
-    if r.status_code != 200:
-        raise Exception('could not download [uuid].zip')
-    with open('[uuid].zip', 'wb') as f:
-        for chunk in r.iter_content(chunk_size=1024):
-            if chunk:
-                f.write(chunk)
-                f.flush()
-    # extract to work dir
-    os.mkdir('[uuid]')
+    # go to our work dir
     os.chdir('[uuid]')
-    # unzip the file
-    r = requests.post('http://[web]/wjc/jobs/[uuid]/state/extracting')
-    with zipfile.ZipFile('../[uuid].zip', allowZip64=True) as zf:
-        zf.extractall()
-    # reset permissions
-    for root, dirs, files in os.walk('.'):
-        for momo in dirs:
-            os.chown(os.path.join(root, momo), os.getuid(), os.getgid())
-        for momo in files:
-            os.chown(os.path.join(root, momo), os.getuid(), os.getgid())
-    # run chmod +x
+    # run chmod +x on run script
     st = os.stat('run')
     os.chmod('run', st.st_mode | stat.S_IEXEC)
     # start the 'run' script
@@ -86,31 +63,13 @@ try:
         error_line = error_reader.read()
         if error_line is not None and len(error_line) > 0:
             logging.error(error_line)
-    failure = process.returncode != 0
-    # zip the results
-    r = requests.post('http://[web]/wjc/jobs/[uuid]/state/compressing')
-    os.remove('../[uuid].zip')
-    with zipfile.ZipFile('../[uuid].zip', 'w', compression=zipfile.ZIP_DEFLATED, allowZip64=True) as ozf:
-        for dir_path, dir_names, file_names in os.walk('.'):
-            for fname in file_names:
-                path = os.path.normpath(os.path.join(dir_path, fname))
-                if os.path.isfile(path):
-                    ozf.write(path, path)
-    # upload the results
-    r = requests.post('http://[web]/wjc/jobs/[uuid]/state/uploading')
-    # remove old file on store
-    r = requests.delete('http://[web]/store/[uuid].zip')
-    with open('../[uuid].zip', 'rb') as f:
-        r = requests.post('http://[web]/store/[uuid].zip', data=f)
-        if r.status_code != 200:
-            raise Exception('could not upload results')
     # finished
-    if failure:
+    if process.returncode != 0:
         r = requests.post('http://[web]/wjc/jobs/[uuid]/state/failed')
         logging.error('Job returned error code %s' % str(process.returncode))
     else:
         r = requests.post('http://[web]/wjc/jobs/[uuid]/state/finished')
         logging.info('job [uuid] done')
 except Exception, e:
-    logging.exception('Failed to complete work %s' % e.message)
+    logging.exception('Failed to complete work %s' % e)
     r = requests.post('http://[web]/wjc/jobs/[uuid]/state/failed')
