@@ -1,7 +1,7 @@
 import logging
 import os
 import re
-import datetime
+from datetime import datetime
 from stat import S_ISDIR
 
 MTIME_TOLERANCE = 3

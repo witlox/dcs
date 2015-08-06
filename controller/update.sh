@@ -6,7 +6,6 @@ docker pull elasticsearch
 docker pull logstash
 docker pull kibana
 # second pull our own containers
-docker pull witlox/store
 docker pull witlox/ilm
 docker pull witlox/wjc
 

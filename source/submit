@@ -3,6 +3,7 @@
 import argparse
 import glob
 import json
+import os
 import requests
 import paramiko
 from ftp_util import sync
@@ -15,25 +16,30 @@ parser.add_argument('key_file', help='specifiy key file for connecting with the 
 parser.add_argument('ami', help='ami id')
 parser.add_argument('instance_type', help='AWS instance type')
 parser.add_argument('max_nodes', help='maximum amount of nodes for the batch')
-parser.add_argument('directories', help='specify which directories to upload as a list of strings (ex: ["/tmp/test","/tmp/*bla*"], each directory must contain a "run" script')
+parser.add_argument('directories', help="specify which directories to upload as a list of strings (ex: ['/tmp/test','/tmp/*bla*'], note: single quote!, each directory must contain a 'run' script")
 
 args = parser.parse_args()
 
 args = args.__dict__
 
 data = json.dumps({'ami': args['ami'], 'instance_type': args['instance_type']})
-r = requests.post('http://%s/wjc/batch/%s' % (args['server'], (args['max_nodes'])), data=data)
-batch_id = r.content
+headers = {'Content-Type': 'application/json', 'User-agent': 'Deltares/1.0'}
+r = requests.post('http://%s/wjc/batch/%s' % (args['server'], (args['max_nodes'])), headers=headers, data=data)
+batch_id = r.content[1:-1]
 print 'your batch code is : %s' % batch_id
 actual_directories = []
-for dir_path in args['directories']:
+for dir_path in eval(args['directories']):
     actual_directories.extend(glob.glob(dir_path))
 with paramiko.SSHClient() as ssh:
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     ssh.connect(hostname=args['server'], username=args['username'], key_filename=args['key_file'])
     with ssh.open_sftp() as sftp:
         for directory in actual_directories:
-            print 'syncing %s' % directory
-            sync(sftp, directory, '%s/job-%s' % (batch_id, directory))
+            if directory:
+                os.chdir(directory)
+                print 'syncing %s' % directory
+                for subdir in os.listdir('.'):
+                    if os.path.isdir(subdir):
+                        sync(sftp, subdir, '%s/job-%s' % (batch_id, subdir), download=False)
 r = requests.post('http://%s/wjc/batch/%s/state/uploaded' % (args['server'], batch_id))
 print r.content
