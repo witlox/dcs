@@ -115,7 +115,9 @@ class MachineMidwife(threading.Thread):
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             username, key_file = pickle.loads(self.client.get(ami))
             logging.info('establishing connection to %s using user %s' % (ip_address, username))
-            ssh.connect(hostname=ip_address, username=username, pkey=key_file)
+            with open('%s.key' % job_id, 'wb') as hairy:
+                hairy.write(key_file)
+            ssh.connect(hostname=ip_address, username=username, key_filename='%s.key' % job_id)
             with ssh.open_sftp() as sftp:
                 destination = '/tmp/store/%s/%s' % (batch_id, job_id)
                 sync(sftp, job_id, destination, clean)

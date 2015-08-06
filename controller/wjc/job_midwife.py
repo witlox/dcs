@@ -75,7 +75,9 @@ class JobMidwife(threading.Thread):
                 with paramiko.SSHClient() as ssh:
                     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
                     logging.info('establishing connection to %s using user %s' % (worker.ip_address, username))
-                    ssh.connect(hostname=worker.ip_address, username=username, pkey=key_file)
+                    with open('%s.key' % job_key, 'wb') as hairy:
+                        hairy.write(key_file)
+                    ssh.connect(hostname=worker.ip_address, username=username, key_filename='%s.key' % job_key)
                     with ssh.open_sftp() as sftp:
                         luke = '/tmp/store/%s/%s' % (job.batch, job_key)
                         sync(sftp, luke, job_key, download=False, delete=True)
