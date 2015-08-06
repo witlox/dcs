@@ -29,12 +29,12 @@ class MachineMidwife(threading.Thread):
 
     def run(self):
         while self.running:
+            self.poky_pokey()
             self.check_newborn()
             sleep(60)
         logging.info('sending midwife home')
 
     def check_newborn(self):
-        self.poky_pokey()
         logging.debug('checking for machine updates')
         for worker_id in self.client.keys('jm-*'):
             try:

@@ -8,7 +8,6 @@ This service consist of 2 working parts
 - I. a "controller" running multiple web services (which can be provisioned through docker).
   - ILM: Instance Level Manager, manages amazon machines
   - WJC: Worker Job Controller, manages the workload and the jobs
-  - Store: Intermediate file storage
 
 - II. a "source" which contains the input data for the "work" and transmits and retreives the "work" (via some scripts).
 
