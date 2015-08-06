@@ -43,7 +43,7 @@ class MachineMidwife(threading.Thread):
                     continue
                 job = pickle.loads(self.client.get(worker.job_id))
                 if worker.reservation is not None and worker.instance is None and job.state == 'requested':
-                    if datetime.now() - worker.request_time > timedelta(minutes=self.settings.aws_req_max_wait):
+                    if datetime.now() - worker.request_time > timedelta(minutes=int(self.settings.aws_req_max_wait)):
                         logging.warning('reservation %s has become stale, restarting' % worker.reservation)
                         job.state = 'received'
                         self.client.set(worker.job_id, pickle.dumps(job))
