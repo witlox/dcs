@@ -46,6 +46,7 @@ class TestWjc(unittest.TestCase):
         midwife.client.exists.return_value = True
         batch = Batch('uploaded')
         batch.max_nodes = 1
+        batch.jobs = pickle.dumps(['job1', 'job2'])
         job1 = Job('spawned', 'something')
         job2 = Job('spawned', 'something')
         midwife.client.get.side_effect = [pickle.dumps(batch), pickle.dumps(job1), pickle.dumps(job2), pickle.dumps(job1), pickle.dumps(job2)]
@@ -55,12 +56,12 @@ class TestWjc(unittest.TestCase):
         midwife.sense_blubberies()
 
         assert midwife.client.get.call_count == 5
-        assert midwife.client.set.call_count == 4
-        assert midwife.client.publish.call_count == 3
+        assert midwife.client.set.call_count == 1
+        assert midwife.client.publish.call_count == 1
 
-        assert len(midwife.client.set.call_args_list) == 4
-        assert pickle.loads(midwife.client.set.call_args_list[3][0][1]).state == 'received'
-        assert midwife.client.set.call_args_list[3][0][0] == 'job-a'
+        assert len(midwife.client.set.call_args_list) == 1
+        assert pickle.loads(midwife.client.set.call_args_list[0][0][1]).state == 'received'
+        assert midwife.client.set.call_args_list[0][0][0] == 'job1'
 
 if __name__ == '__main__':
     unittest.main()
