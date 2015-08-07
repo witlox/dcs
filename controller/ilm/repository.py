@@ -44,7 +44,7 @@ class AmiRepository(threading.Thread):
         result = []
         for key in self.client.keys('jm-*'):
             worker = pickle.loads(self.client.get(key))
-            result.append([key, worker.job_id, worker.reservation, worker.instance, worker.request_time, worker.ip_address])
+            result.append([key, worker.job_id, worker.batch_id, worker.reservation, worker.instance, worker.request_time, worker.ip_address])
         return result
 
     def run(self):
