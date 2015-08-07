@@ -108,7 +108,7 @@ class MachineMidwife(threading.Thread):
                             terminate_worker(worker)
                             self.client.delete(worker_id)
             except Exception, e:
-                logging.exception('somthing failed (%s)' % e)
+                logging.exception('something failed (%s)' % e)
 
     def pull(self, ami, batch_id, job_id, ip_address, clean=True):
         with paramiko.SSHClient() as ssh:
@@ -121,6 +121,7 @@ class MachineMidwife(threading.Thread):
             with ssh.open_sftp() as sftp:
                 destination = '/tmp/store/%s/%s' % (batch_id, job_id)
                 sync(sftp, job_id, destination)
-                if clean:
-                    sftp.rmdir(job_id)
+            if clean:
+                ssh.exec_command('rm -rf %s' % job_id)
+                ssh.exec_command('rm -f %s.sh' % job_id)
             logging.info('transferred results for %s, saved to %s' % (job_id, destination))
