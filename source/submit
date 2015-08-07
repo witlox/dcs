@@ -38,13 +38,13 @@ with paramiko.SSHClient() as ssh:
         for directory in actual_directories:
             if os.path.isdir(directory):
                 if os.path.isfile(os.path.join(directory, 'run')):
-                    print 'syncing %s' % directory
-                    sync(sftp, directory, '%s/job-%s' % (batch_id, directory), download=False)
+                    print '1. syncing %s to %s/job-%s' % (directory, batch_id, os.path.basename(os.path.normpath(directory)))
+                    sync(sftp, directory, '%s/job-%s' % (batch_id, os.path.basename(os.path.normpath(directory))), download=False)
                 else:
                     os.chdir(directory)
                     for subdir in os.listdir('.'):
                         if os.path.isfile(os.path.join(subdir, 'run')):
-                            print 'syncing %s' % subdir
-                            sync(sftp, subdir, '%s/job-%s' % (batch_id, subdir), download=False)
+                            print '2. syncing %s to %s/job-%s' % (subdir, batch_id, os.path.basename(os.path.normpath(subdir)))
+                            sync(sftp, subdir, '%s/job-%s' % (batch_id, os.path.basename(os.path.normpath(subdir))), download=False)
 r = requests.post('http://%s/wjc/batch/%s/state/uploaded' % (args['server'], batch_id), headers={'User-agent': 'Luke/1.0'})
 print r.content
