@@ -53,7 +53,10 @@ class JobRepository:
         result = []
         for batch_key in self.client.keys('batch-*'):
             batch = pickle.loads(self.client.get(batch_key))
-            result.append([batch_key, batch.state, batch.ami, batch.instance_type, batch.max_nodes, pickle.loads(batch.jobs)])
+            jobs = []
+            if batch.jobs:
+                jobs = pickle.loads(batch.jobs)
+            result.append([batch_key, batch.state, batch.ami, batch.instance_type, batch.max_nodes, jobs])
         return result
 
     def execute_batch(self, max_nodes, ami, instance_type):

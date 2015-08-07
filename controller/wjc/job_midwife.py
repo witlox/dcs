@@ -103,7 +103,9 @@ class JobMidwife(threading.Thread):
             try:
                 batch = pickle.loads(self.client.get(batch_key))
                 if batch.state == 'uploaded':
-                    if batch.jobs and len(pickle.loads(batch.jobs)) == 0:
+                    if not batch.jobs:
+                        continue
+                    if len(pickle.loads(batch.jobs)) == 0:
                         batch.jobs = pickle.dumps(os.listdir('/tmp/store/%s' % batch_key))
                         self.client.set(batch_key, pickle.dumps(batch))
                         for job_id in pickle.loads(batch.jobs):

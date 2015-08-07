@@ -102,6 +102,8 @@ class MachineMidwife(threading.Thread):
         for batch_id in self.client.keys('batch-*'):
             try:
                 batch = pickle.loads(self.client.get(batch_id))
+                if not batch.jobs:
+                    continue
                 are_we_there_yet = True
                 for job_id in pickle.loads(batch.jobs):
                     if self.client.exists(job_id):
