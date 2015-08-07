@@ -68,7 +68,7 @@ class JobRepository:
     def delete_batch(self, batch_id):
         if batch_id.startswith('batch-'):
             if self.client.exists(batch_id):
-                for job_id in self.client.get('job-*'):
+                for job_id in self.client.keys('job-*'):
                     job = pickle.loads(self.client.get(job_id))
                     if job.batch_id == batch_id:
                         self.client.delete(job_id)
@@ -78,8 +78,7 @@ class JobRepository:
                 except Exception, e:
                     raise 'could not delete %s (%s)' % (batch_id, e)
                 finally:
-                    result = self.client.delete(batch_id)
-                    return result
+                    return self.client.delete(batch_id)
         return 'not a batch'
 
     def get_batch_state(self, batch_id):
