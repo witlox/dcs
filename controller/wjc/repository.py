@@ -71,7 +71,7 @@ class JobRepository:
                 batch = pickle.loads(self.client.get(batch_id))
                 for job_id in batch.jobs:
                     if self.client.exists(job_id):
-                        self.client.remove(job_id)
+                        self.client.delete(job_id)
                         self.client.publish('jobs', job_id)
                 try:
                     shutil.rmtree('/tmp/store/%s' % batch_id)
