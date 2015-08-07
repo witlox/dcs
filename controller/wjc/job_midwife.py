@@ -107,10 +107,9 @@ class JobMidwife(threading.Thread):
                         batch.jobs.extend(os.listdir('/tmp/store/%s' % batch_key))
                         self.client.set(batch_key, pickle.dumps(batch))
                         for job_id in batch.jobs:
-                            job = Job('spawned')
+                            job = Job('spawned', batch_key)
                             job.ami = batch.ami
                             job.instance_type = batch.instance_type
-                            job.batch = batch_key
                             self.client.set(job_id, pickle.dumps(job))
                             self.client.publish('jobs', job_id)
                     finished = 0

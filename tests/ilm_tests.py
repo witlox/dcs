@@ -44,7 +44,7 @@ class TestIlm(unittest.TestCase):
         repository = AmiRepository()
         repository.client = mock.MagicMock()
         repository.client.exists.return_value = True
-        job = Job('received')
+        job = Job('received', 'something')
         repository.client.get.return_value = pickle.dumps(job)
         repository.client.set = mock.MagicMock()
         repository.client.publish = mock.MagicMock()
@@ -69,7 +69,7 @@ class TestIlm(unittest.TestCase):
         repository = AmiRepository()
         repository.client = mock.MagicMock()
         repository.client.exists.return_value = True
-        job = Job('received')
+        job = Job('received', 'something')
         repository.client.get.return_value = pickle.dumps(job)
         repository.client.set = mock.MagicMock()
         repository.client.publish = mock.MagicMock()
@@ -158,7 +158,7 @@ class TestIlm(unittest.TestCase):
         worker.instance = None
         worker.request_time = datetime.now()
         worker.ip_address = None
-        midwife.client.get.side_effect = [pickle.dumps(worker), pickle.dumps(Job('requested'))]
+        midwife.client.get.side_effect = [pickle.dumps(worker), pickle.dumps(Job('requested', 'something'))]
         midwife.client.set = mock.MagicMock()
         midwife.client.publish = mock.MagicMock()
 
@@ -191,7 +191,7 @@ class TestIlm(unittest.TestCase):
         worker.instance = None
         worker.request_time = datetime.now()-timedelta(hours=1, milliseconds=1)
         worker.ip_address = None
-        midwife.client.get.side_effect = [pickle.dumps(worker), pickle.dumps(Job('requested'))]
+        midwife.client.get.side_effect = [pickle.dumps(worker), pickle.dumps(Job('requested', 'something'))]
         midwife.client.set = mock.MagicMock()
         midwife.client.publish = mock.MagicMock()
 
@@ -225,7 +225,7 @@ class TestIlm(unittest.TestCase):
         worker.reservation = 'reservation'
         worker.instance = 'instance'
         worker.ip_address = None
-        midwife.client.get.side_effect = [pickle.dumps(worker), pickle.dumps(Job('finished'))]
+        midwife.client.get.side_effect = [pickle.dumps(worker), pickle.dumps(Job('finished', 'something'))]
         midwife.client.set = mock.MagicMock()
         midwife.client.publish = mock.MagicMock()
 
@@ -256,9 +256,8 @@ class TestIlm(unittest.TestCase):
         worker.reservation = 'reservation'
         worker.instance = 'instance'
         worker.ip_address = None
-        job = Job('spawned')
-        job.batch_id = 'batch-'
-        midwife.client.get.side_effect = [pickle.dumps(worker), pickle.dumps(Job('finished')), pickle.dumps(job)]
+        job = Job('spawned', 'batch-')
+        midwife.client.get.side_effect = [pickle.dumps(worker), pickle.dumps(Job('finished', 'batch-')), pickle.dumps(job)]
         midwife.client.set = mock.MagicMock()
         midwife.client.publish = mock.MagicMock()
 
@@ -289,9 +288,8 @@ class TestIlm(unittest.TestCase):
         worker.reservation = 'reservation'
         worker.instance = 'instance'
         worker.ip_address = None
-        job = Job('happy')
-        job.batch_id = 'batch-'
-        midwife.client.get.side_effect = [pickle.dumps(worker), pickle.dumps(Job('finished')), pickle.dumps(job)]
+        job = Job('happy', 'batch-')
+        midwife.client.get.side_effect = [pickle.dumps(worker), pickle.dumps(Job('finished', 'batch-')), pickle.dumps(job)]
         midwife.client.set = mock.MagicMock()
         midwife.client.publish = mock.MagicMock()
 
@@ -322,7 +320,7 @@ class TestIlm(unittest.TestCase):
         worker.reservation = 'reservation'
         worker.instance = 'instance'
         worker.ip_address = None
-        midwife.client.get.side_effect = [pickle.dumps(worker), pickle.dumps(Job('failed')), pickle.dumps(['test', 'aaa'])]
+        midwife.client.get.side_effect = [pickle.dumps(worker), pickle.dumps(Job('failed', 'something')), pickle.dumps(['test', 'aaa'])]
         midwife.client.set = mock.MagicMock()
         midwife.client.publish = mock.MagicMock()
 

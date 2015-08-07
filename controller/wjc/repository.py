@@ -25,7 +25,7 @@ class JobRepository:
         result = []
         for job_key in self.client.keys('job-*'):
             job = pickle.loads(self.client.get(job_key))
-            result.append([job_key, job.state, job.ami, job.instance_type])
+            result.append([job_key, job.batch_id, job.state, job.ami, job.instance_type])
         return result
 
     def get_job_state(self, job_id):

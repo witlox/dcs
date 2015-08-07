@@ -2,6 +2,7 @@
 
 import argparse
 import os
+import shutil
 
 import paramiko
 
@@ -26,6 +27,6 @@ with paramiko.SSHClient() as ssh:
     ssh.connect(hostname=args['server'], username=args['username'], key_filename=args['key_file'])
     with ssh.open_sftp() as sftp:
         sync(sftp, args['batch_id'], args['path'])
-for directory in os.listdir(args['path']):
-    os.rename(os.path.join(args['path'], directory), os.path.join(args['path'], directory[4:]))
+for directory in os.listdir(os.path.join(args['path'], args['batch_id'])):
+    shutil.move(os.path.join(args['path'], args['batch_id'], directory), os.path.join(args['path'], args['batch_id'], directory[4:]))
 print 'download done to %s' % args['path']

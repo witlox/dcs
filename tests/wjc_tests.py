@@ -46,8 +46,8 @@ class TestWjc(unittest.TestCase):
         midwife.client.exists.return_value = True
         batch = Batch('uploaded')
         batch.max_nodes = 1
-        job1 = Job('spawned')
-        job2 = Job('spawned')
+        job1 = Job('spawned', 'something')
+        job2 = Job('spawned', 'something')
         midwife.client.get.side_effect = [pickle.dumps(batch), pickle.dumps(job1), pickle.dumps(job2), pickle.dumps(job1), pickle.dumps(job2)]
         midwife.client.set = mock.MagicMock()
         midwife.client.publish = mock.MagicMock()
