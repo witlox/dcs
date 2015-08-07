@@ -14,5 +14,6 @@ args = parser.parse_args()
 
 args = args.__dict__
 
-r = requests.delete('http://%s/wjc/batch/%s' % (args['server'], args['code']))
+headers = {'User-agent': 'Luke/1.0'}
+r = requests.delete('http://%s/wjc/batch/%s' % (args['server'], args['code']), headers=headers)
 print 'your %s has been deleted (%s)' % (args['code'], r.content)

@@ -22,6 +22,7 @@ class JobMidwife(threading.Thread):
         self.settings = Settings()
         self.client = client
         self.running = True
+        self.headers = {'User-agent': 'dcs_ilm/1.0'}
 
     def halt(self):
         self.running = False
@@ -48,7 +49,7 @@ class JobMidwife(threading.Thread):
                 if worker.ip_address is None:
                     raise Exception('Could not determine IP address for worker/job %s' % job_key)
                 # check if state is ok
-                ami_status = requests.get('http://%s/ilm/ami/%s/status' % (self.settings.web, worker.instance))
+                ami_status = requests.get('http://%s/ilm/ami/%s/status' % (self.settings.web, worker.instance), headers=self.headers)
                 if 'status:ok' not in ami_status.content.lower():
                     logging.info('AMI (%s) status (%s) NOK, waiting...' % (worker.instance, ami_status.content))
                     continue
@@ -68,7 +69,7 @@ class JobMidwife(threading.Thread):
                 # fish ami
                 ami_req = 'http://%s/ilm/ami/%s' % (self.settings.web, job.ami)
                 logging.info('retrieving AMI settings from %s' % ami_req)
-                r_ami = requests.get(ami_req)
+                r_ami = requests.get(ami_req, headers=self.headers)
                 data = pickle.loads(json.loads(r_ami.content))
                 username = data[0]
                 key_file = data[1]
@@ -80,7 +81,7 @@ class JobMidwife(threading.Thread):
                     ssh.connect(hostname=worker.ip_address, username=username, key_filename='%s.key' % job_key)
                     with ssh.open_sftp() as sftp:
                         luke = '/tmp/store/%s/%s' % (job.batch, job_key)
-                        sync(sftp, luke, job_key, download=False, delete=True)
+                        sync(sftp, luke, job_key, download=False)
                         sftp.put(ramon_file, ramon_file)
                         ssh.exec_command('chmod +x %s' % ramon_file)
                         start = 'virtualenv venv\nsource venv/bin/activate\npip install python-logstash requests\nnohup ./%s  > /dev/null 2>&1 &\n' % ramon_file
@@ -92,7 +93,7 @@ class JobMidwife(threading.Thread):
                             logging.info('%s output: %s' % (job_key, output))
                         if error:
                             logging.error('%s error: %s' % (job_key, error))
-                            requests.post('http://%s/wjc/jobs/%s/state/failed' % (self.settings.web, job_key))
+                            requests.post('http://%s/wjc/jobs/%s/state/failed' % (self.settings.web, job_key), headers=self.headers)
                 os.remove(ramon_file)
             except Exception, e:
                 logging.exception('failure in %s (%s), continuing...' % (job_key, e))

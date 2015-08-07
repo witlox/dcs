@@ -120,7 +120,7 @@ class MachineMidwife(threading.Thread):
             ssh.connect(hostname=ip_address, username=username, key_filename='%s.key' % job_id)
             with ssh.open_sftp() as sftp:
                 destination = '/tmp/store/%s/%s' % (batch_id, job_id)
-                sync(sftp, job_id, destination, clean)
+                sync(sftp, job_id, destination)
                 if clean:
                     sftp.rmdir(job_id)
             logging.info('transferred results for %s, saved to %s' % (job_id, destination))

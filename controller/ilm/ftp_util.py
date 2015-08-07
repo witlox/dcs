@@ -6,7 +6,7 @@ from stat import S_ISDIR
 
 MTIME_TOLERANCE = 3
 
-def _walk_remote(sftp, path, top_down=True):
+def _walk_remote(sftp, path, topdown=True):
     try:
         res = sftp.listdir_attr(path)
     except IOError:
@@ -18,17 +18,17 @@ def _walk_remote(sftp, path, top_down=True):
         if not S_ISDIR(stat.st_mode):
             yield 'file', rfile, stat
         else:
-            if top_down:
+            if topdown:
                 yield 'dir', rfile, stat
-                for res in _walk_remote(sftp, rfile, top_down=top_down):
+                for res in _walk_remote(sftp, rfile, topdown=topdown):
                     yield res
             else:
-                for res in _walk_remote(sftp, rfile, top_down=top_down):
+                for res in _walk_remote(sftp, rfile, topdown=topdown):
                     yield res
                 yield 'dir', rfile, None
 
-def _walk_local(path, top_down=True):
-    for path, dirs, files in os.walk(path, topdown=top_down):
+def _walk_local(path, topdown=True):
+    for path, dirs, files in os.walk(path, topdown=topdown):
         for file in files:
             file = os.path.join(path, file)
             yield 'file', file, os.stat(file)

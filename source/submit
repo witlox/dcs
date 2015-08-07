@@ -16,15 +16,16 @@ parser.add_argument('key_file', help='specifiy key file for connecting with the 
 parser.add_argument('ami', help='ami id')
 parser.add_argument('instance_type', help='AWS instance type')
 parser.add_argument('max_nodes', help='maximum amount of nodes for the batch')
-parser.add_argument('directories', help="specify which directories to upload as a list of strings (ex: ['/tmp/test','/tmp/*bla*'], note: single quote!, each directory must contain a 'run' script")
+parser.add_argument('directories', help="specify which directories to upload as a list of strings "
+                                        "(ex: ['/tmp/test','/tmp/*bla*'], note: single quote!, "
+                                        "each directory or all sub-directories must contain a 'run' script")
 
 args = parser.parse_args()
 
 args = args.__dict__
 
 data = json.dumps({'ami': args['ami'], 'instance_type': args['instance_type']})
-headers = {'Content-Type': 'application/json', 'User-agent': 'Deltares/1.0'}
-r = requests.post('http://%s/wjc/batch/%s' % (args['server'], (args['max_nodes'])), headers=headers, data=data)
+r = requests.post('http://%s/wjc/batch/%s' % (args['server'], (args['max_nodes'])), headers={'Content-Type': 'application/json', 'User-agent': 'Luke/1.0'}, data=data)
 batch_id = r.content[1:-1]
 print 'your batch code is : %s' % batch_id
 actual_directories = []
@@ -35,11 +36,15 @@ with paramiko.SSHClient() as ssh:
     ssh.connect(hostname=args['server'], username=args['username'], key_filename=args['key_file'])
     with ssh.open_sftp() as sftp:
         for directory in actual_directories:
-            if directory:
-                os.chdir(directory)
-                print 'syncing %s' % directory
-                for subdir in os.listdir('.'):
-                    if os.path.isdir(subdir):
-                        sync(sftp, subdir, '%s/job-%s' % (batch_id, subdir), download=False)
-r = requests.post('http://%s/wjc/batch/%s/state/uploaded' % (args['server'], batch_id))
+            if os.path.isdir(directory):
+                if os.path.isfile(os.path.join(directory, 'run')):
+                    print 'syncing %s' % directory
+                    sync(sftp, directory, '%s/job-%s' % (batch_id, directory), download=False)
+                else:
+                    os.chdir(directory)
+                    for subdir in os.listdir('.'):
+                        if os.path.isfile(os.path.join(subdir, 'run')):
+                            print 'syncing %s' % subdir
+                            sync(sftp, subdir, '%s/job-%s' % (batch_id, subdir), download=False)
+r = requests.post('http://%s/wjc/batch/%s/state/uploaded' % (args['server'], batch_id), headers={'User-agent': 'Luke/1.0'})
 print r.content

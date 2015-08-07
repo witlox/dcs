@@ -36,13 +36,14 @@ dictConfig({
 })
 
 try:
+    headers = {'User-agent': 'Ramon/1.0'}
     # go to our work dir
     os.chdir('[uuid]')
     # run chmod +x on run script
     st = os.stat('run')
     os.chmod('run', st.st_mode | stat.S_IEXEC)
     # start the 'run' script
-    r = requests.post('http://[web]/wjc/jobs/[uuid]/state/running')
+    r = requests.post('http://[web]/wjc/jobs/[uuid]/state/running', headers=headers)
     output_filename = 'output.log'
     error_filename = 'error.log'
     # mwahahaha, buffer outputs and write them to loggers during execution (non blocking)
@@ -65,11 +66,11 @@ try:
             logging.error(error_line)
     # finished
     if process.returncode != 0:
-        r = requests.post('http://[web]/wjc/jobs/[uuid]/state/failed')
+        r = requests.post('http://[web]/wjc/jobs/[uuid]/state/failed', headers=headers)
         logging.error('Job returned error code %s' % str(process.returncode))
     else:
-        r = requests.post('http://[web]/wjc/jobs/[uuid]/state/finished')
+        r = requests.post('http://[web]/wjc/jobs/[uuid]/state/finished', headers=headers)
         logging.info('job [uuid] done')
 except Exception, e:
     logging.exception('Failed to complete work %s' % e)
-    r = requests.post('http://[web]/wjc/jobs/[uuid]/state/failed')
+    r = requests.post('http://[web]/wjc/jobs/[uuid]/state/failed', headers=headers)

@@ -13,5 +13,6 @@ args = parser.parse_args()
 
 args = args.__dict__
 
-r = requests.get('http://%s/wjc/jobs/%s/state' % (args['server'], args['job_code']))
+headers = {'User-agent': 'Luke/1.0'}
+r = requests.get('http://%s/wjc/jobs/%s/state' % (args['server'], args['job_code']), headers=headers)
 print 'your status is: %s' % r.content
