@@ -103,10 +103,10 @@ class JobMidwife(threading.Thread):
             try:
                 batch = pickle.loads(self.client.get(batch_key))
                 if batch.state == 'uploaded':
-                    if len(batch.jobs) == 0:
-                        batch.jobs.extend(os.listdir('/tmp/store/%s' % batch_key))
+                    if len(pickle.loads(batch.jobs)) == 0:
+                        batch.jobs = pickle.dumps(os.listdir('/tmp/store/%s' % batch_key))
                         self.client.set(batch_key, pickle.dumps(batch))
-                        for job_id in batch.jobs:
+                        for job_id in pickle.loads(batch.jobs):
                             job = Job('spawned', batch_key)
                             job.ami = batch.ami
                             job.instance_type = batch.instance_type
@@ -114,17 +114,17 @@ class JobMidwife(threading.Thread):
                             self.client.publish('jobs', job_id)
                     finished = 0
                     current = 0
-                    for job_id in batch.jobs:
+                    for job_id in pickle.loads(batch.jobs):
                         if self.client.exists(job_id):
                             job = pickle.loads(self.client.get(job_id))
                             if job.state == 'running':
                                 current += 1
                             elif job.state == 'finished' and job.state != 'failed':
                                 finished += 1
-                    logging.info("currently running %d jobs and finished %d jobs of %d total jobs in %s" % (current, finished, len(batch.jobs), batch_key))
-                    if finished == len(batch.jobs):
+                    logging.info("currently running %d jobs and finished %d jobs of %d total jobs in %s" % (current, finished, len(pickle.loads(batch.jobs)), batch_key))
+                    if finished == len(pickle.loads(batch.jobs)):
                         failures = 0
-                        for job_id in batch.jobs:
+                        for job_id in pickle.loads(batch.jobs):
                             if self.client.exists(job_id):
                                 job = pickle.loads(self.client.get(job_id))
                                 if job.state == 'failed':
@@ -133,7 +133,7 @@ class JobMidwife(threading.Thread):
                         batch.state = 'finished'
                         self.client.set(batch_key, pickle.dumps(batch))
                         continue
-                    for job_id in batch.jobs:
+                    for job_id in pickle.loads(batch.jobs):
                         if self.client.exists(job_id):
                             job = pickle.loads(self.client.get(job_id))
                             if job.state == 'spawned' and current < batch.max_nodes:
