@@ -68,9 +68,9 @@ class JobRepository:
     def delete_batch(self, batch_id):
         if batch_id.startswith('batch-'):
             if self.client.exists(batch_id):
-                batch = pickle.loads(self.client.get(batch_id))
-                for job_id in batch.jobs:
-                    if self.client.exists(job_id):
+                for job_id in self.client.get('job-*'):
+                    job = pickle.loads(self.client.get(job_id))
+                    if job.batch_id == batch_id:
                         self.client.delete(job_id)
                         self.client.publish('jobs', job_id)
                 try:

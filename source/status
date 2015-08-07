@@ -19,7 +19,8 @@ print 'your batch status is: %s' % r.content
 r = requests.get('http://%s/wjc/jobs' % args['server'], headers=headers)
 jobs = eval(r.content)
 r = requests.get('http://%s/ilm/workers' % args['server'], headers=headers)
-workers = eval(r.content)
+if r.content != 'null':
+    workers = eval(r.content)
 for job in jobs:
     if job[1] == args['code']:
         jw = next(iter([w for w in workers if w[1] == job[0]]), None)
