@@ -39,6 +39,14 @@ class MachineMidwife(threading.Thread):
         for worker_id in self.client.keys('jm-*'):
             try:
                 worker = pickle.loads(self.client.get(worker_id))
+                if not self.client.exists(worker.batch_id):
+                    if self.settings.auto_remove_failed:
+                        logging.info('found worker disconnected from batch and auto-remove on failure enabled, trying to remove %s' % worker.instance)
+                        terminate_worker(worker)
+                    else:
+                        logging.warning('found worker disconnected from batch but auto-remove on failure disabled, manually remove %s!' % worker.instance)
+                    self.client.delete(worker_id)
+                    continue
                 if not self.client.exists(worker.job_id):
                     continue
                 job = pickle.loads(self.client.get(worker.job_id))

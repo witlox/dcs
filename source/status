@@ -19,7 +19,7 @@ print 'your batch status is: %s' % r.content
 r = requests.get('http://%s/wjc/jobs' % args['server'], headers=headers)
 jobs = eval(r.content)
 r = requests.get('http://%s/ilm/workers' % args['server'], headers=headers)
-workers = None
+workers = []
 try:
     workers = eval(r.content)
 except:
