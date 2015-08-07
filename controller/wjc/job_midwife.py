@@ -138,7 +138,7 @@ class JobMidwife(threading.Thread):
                         if self.client.exists(job_id):
                             job = pickle.loads(self.client.get(job_id))
                             if job.state == 'spawned' and current < batch.max_nodes:
-                                logging.info('detected empty slot (%d/%d) for %s, creating job' % (current, batch.max_nodes, batch_key))
+                                logging.info('detected empty slot (%d/%d) for %s, creating job' % ( batch.max_nodes-current, batch.max_nodes, batch_key))
                                 job.state = 'received'
                                 self.client.set(job_id, pickle.dumps(job))
                                 self.client.publish('jobs', job_id)

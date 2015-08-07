@@ -61,7 +61,7 @@ class MachineMidwife(threading.Thread):
                         self.client.publish('jobs', worker.job_id)
                 elif worker.instance is not None and job.state == 'finished':
                     logging.info('%s finished with success' % worker.job_id)
-                    self.pull(job.ami, worker.job_id, worker.ip_address, self.settings.recycle_workers)
+                    self.pull(job.ami, worker.batch_id, worker.job_id, worker.ip_address, self.settings.recycle_workers)
                     if not self.settings.recycle_workers:
                         logging.info('recycle workers off, %s finished, shutting down machine' % worker.instance)
                         terminate_worker(worker)
@@ -79,7 +79,7 @@ class MachineMidwife(threading.Thread):
                             self.client.delete(worker_id)
                 elif worker.instance is not None and job.state == 'failed':
                     logging.warning('%s finished with failure' % worker.job_id)
-                    self.pull(job.ami, worker.job_id, worker.ip_address, False)
+                    self.pull(job.ami, worker.batch_id, worker.job_id, worker.ip_address, False)
                     if self.settings.auto_remove_failed:
                         logging.info('auto-remove on failure enabled, trying to remove %s' % worker.instance)
                         terminate_worker(worker)
