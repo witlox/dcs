@@ -79,7 +79,7 @@ class MachineMidwife(threading.Thread):
                             self.client.delete(worker_id)
                 elif worker.instance is not None and job.state == 'failed':
                     logging.warning('%s finished with failure' % worker.job_id)
-                    self.pull(job.ami, worker.batch_id, worker.job_id, worker.ip_address, False)
+                    self.pull(job.ami, worker.batch_id, worker.job_id, worker.ip_address, False, True)
                     if self.settings.auto_remove_failed:
                         logging.info('auto-remove on failure enabled, trying to remove %s' % worker.instance)
                         terminate_worker(worker)
@@ -110,7 +110,7 @@ class MachineMidwife(threading.Thread):
             except Exception, e:
                 logging.exception('something failed (%s)' % e)
 
-    def pull(self, ami, batch_id, job_id, ip_address, clean=True):
+    def pull(self, ami, batch_id, job_id, ip_address, clean=True, failed=False):
         with paramiko.SSHClient() as ssh:
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             username, key_file = pickle.loads(self.client.get(ami))
@@ -120,6 +120,8 @@ class MachineMidwife(threading.Thread):
             ssh.connect(hostname=ip_address, username=username, key_filename='%s.key' % job_id)
             with ssh.open_sftp() as sftp:
                 destination = '/tmp/store/%s/%s' % (batch_id, job_id)
+                if failed:
+                    destination += '_failed'
                 sync(sftp, job_id, destination)
             if clean:
                 ssh.exec_command('rm -rf %s' % job_id)
