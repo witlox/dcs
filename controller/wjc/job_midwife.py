@@ -80,7 +80,7 @@ class JobMidwife(threading.Thread):
                         hairy.write(key_file)
                     ssh.connect(hostname=worker.ip_address, username=username, key_filename='%s.key' % job_key)
                     with ssh.open_sftp() as sftp:
-                        luke = '/tmp/store/%s/%s' % (job.batch, job_key)
+                        luke = '/tmp/store/%s/%s' % (job.batch_id, job_key)
                         sync(sftp, luke, job_key, download=False)
                         sftp.put(ramon_file, ramon_file)
                         ssh.exec_command('chmod +x %s' % ramon_file)

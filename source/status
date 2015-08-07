@@ -6,7 +6,7 @@ import requests
 parser = argparse.ArgumentParser(description='get job status from wjc')
 
 parser.add_argument('server', help='specifiy the web server address')
-parser.add_argument('job_code', help='code you got from submit')
+parser.add_argument('code', help='code you got from submit')
 
 
 args = parser.parse_args()
@@ -14,5 +14,5 @@ args = parser.parse_args()
 args = args.__dict__
 
 headers = {'User-agent': 'Luke/1.0'}
-r = requests.get('http://%s/wjc/jobs/%s/state' % (args['server'], args['job_code']), headers=headers)
+r = requests.get('http://%s/wjc/batch/%s/state' % (args['server'], args['code']), headers=headers)
 print 'your status is: %s' % r.content
