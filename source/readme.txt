@@ -9,3 +9,4 @@ These scripts facilitate the communication and data transfer to and from the con
 "status" retrieves the current state of the batch.
 "submit" creates a new batch.
 "retrieve" is needed to download files from the controller.
+"signal" kill a job.

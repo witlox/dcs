@@ -1,0 +1,18 @@
+#!/usr/bin/env python
+
+import argparse
+import requests
+
+parser = argparse.ArgumentParser(description='signal job failed so the results are retrieved')
+
+parser.add_argument('server', help='specifiy the web server address')
+parser.add_argument('job_code', help='job_code of job to fail')
+
+
+args = parser.parse_args()
+
+args = args.__dict__
+
+headers = {'User-agent': 'Luke/1.0'}
+r = requests.get('http://%s/wjc/jobs/%s/state/failed' % (args['server'], args['job_code']), headers=headers)
+print 'result: %s' % r.content
