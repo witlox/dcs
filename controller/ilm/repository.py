@@ -58,34 +58,41 @@ class AmiRepository(threading.Thread):
 
     # state machine for virtual machine manager
     def job_changed(self, job_id):
-        if self.client.exists(job_id):
-            job = pickle.loads(self.client.get(job_id))
-            if job.state == 'received':
-                for worker_id in self.client.keys('jm-*'):
-                    existing_worker = pickle.loads(self.client.get(worker_id))
-                    if existing_worker.batch_id == job.batch_id and existing_worker.job_id is None:
+        try:
+            if self.client.exists(job_id):
+                job = pickle.loads(self.client.get(job_id))
+                if job.state == 'received':
+                    for worker_id in self.client.keys('jm-*'):
+                        existing_worker = pickle.loads(self.client.get(worker_id))
+                        if existing_worker.batch_id == job.batch_id and existing_worker.job_id is None:
+                            job.state = 'requested'
+                            existing_worker.job_id = job_id
+                            self.client.set(worker_id, pickle.dumps(existing_worker))
+                    worker_id, reservation = aws.start_machine(job.ami, job.instance_type)
+                    if worker_id:
                         job.state = 'requested'
-                        existing_worker.job_id = job_id
-                        self.client.set(worker_id, pickle.dumps(existing_worker))
-                worker_id, reservation = aws.start_machine(job.ami, job.instance_type)
-                if worker_id:
-                    job.state = 'requested'
-                    worker = Worker(job_id, job.batch_id)
-                    worker.request_time = datetime.now()
-                    worker.reservation = reservation
-                    self.client.set(worker_id, pickle.dumps(worker))
-                else:
-                    job.state = 'ami request failed'
-                self.client.set(job_id, pickle.dumps(job))
-                self.client.publish('jobs', job_id)
-        else:
-            logging.info('removing worker for job %s' % job_id)
-            for worker_id in self.client.keys('jm-*'):
-                worker = pickle.loads(self.client.get(worker_id))
-                if worker.job_id == job_id and worker.instance is not None:
-                    status = aws.get_status(worker.instance)
-                    if status is not None and status.lower() == 'status:ok':
-                        result = aws.terminate_machine(worker.instance)
-                        if result is None:
-                            logging.error('Could not remove worker %s, remove manually!' % worker.instance)
-                    self.client.delete(worker_id)
+                        worker = Worker(job_id, job.batch_id)
+                        worker.request_time = datetime.now()
+                        worker.reservation = reservation
+                        self.client.set(worker_id, pickle.dumps(worker))
+                    else:
+                        job.state = 'ami request failed'
+                    self.client.set(job_id, pickle.dumps(job))
+                    self.client.publish('jobs', job_id)
+            else:
+                logging.info('removing worker for job %s' % job_id)
+                for worker_id in self.client.keys('jm-*'):
+                    worker = pickle.loads(self.client.get(worker_id))
+                    if worker.job_id == job_id and worker.instance is not None:
+                        status = aws.get_status(worker.instance)
+                        try:
+                            if status is not None and str(status).lower() == 'status:ok':
+                                result = aws.terminate_machine(worker.instance)
+                                if result is None:
+                                    logging.error('Could not remove worker %s, remove manually!' % worker.instance)
+                        except Exception, e:
+                            logging.exception('Could not remove worker %s, remove manually! (%s)' % (worker.instance, e))
+                        finally:
+                            self.client.delete(worker_id)
+        except Exception, e:
+            logging.exception('error during job (%s) message handling (%s), continuing' % (job_id, e))
