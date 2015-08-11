@@ -59,7 +59,7 @@ class MachineMidwife(threading.Thread):
                         self.client.delete(worker_id)
                         continue
                     aws_instance, ip_address = aws.my_booted_machine(worker.reservation)
-                    if aws_instance is not None:
+                    if aws_instance is not None and ip_address is not None:
                         logging.info('reservation %s booted to instance %s' % (worker.reservation, aws_instance))
                         worker.instance = aws_instance
                         worker.ip_address = ip_address
