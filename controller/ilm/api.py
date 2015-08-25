@@ -5,6 +5,8 @@ from flask.json import dumps
 from flask_autodoc import Autodoc
 
 from repository import AmiRepository
+from machine_midwife import MachineMidwife
+from consuela import Consuela
 
 app = Flask(__name__)
 auto = Autodoc(app)
@@ -14,13 +16,15 @@ app.config['REPOSITORY'] = AmiRepository()
 if not os.path.exists('/tmp/store'):
     os.mkdir('/tmp/store')
 
+app.config['MM'] = MachineMidwife()
+app.config['MM'].start()
+
+app.config['CSU'] = Consuela()
+app.config['CSU'].start()
+
 def __get_amis__():
     repository = app.config['REPOSITORY']
     return Response(dumps(repository.get_all_amis()), mimetype='application/json')
-
-def __get_ami__(name):
-    repository = app.config['REPOSITORY']
-    return Response(dumps(repository.get_ami(name)), mimetype='application/json')
 
 def __get_ami_status__(aid):
     status = aws.get_status(aid)
@@ -58,12 +62,6 @@ def get_amis():
     """ list currently registered AMI's """
     return __get_amis__()
 
-
-@app.route('/ami/<name>', methods=['GET'])
-@auto.doc()
-def get_ami(name):
-    """ get requested AMI credentials """
-    return __get_ami__(name)
 
 @app.route('/ami/<aid>/status', methods=['GET'])
 @auto.doc()

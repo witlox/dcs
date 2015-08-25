@@ -4,3 +4,4 @@ flask
 requests
 python-logstash
 paramiko
+scp

@@ -5,8 +5,7 @@ import os
 import shutil
 
 import paramiko
-
-from ftp_util import sync
+import scp
 
 parser = argparse.ArgumentParser(description='retrieve a directory from the store')
 
@@ -25,8 +24,8 @@ if not os.path.isdir(args['path']):
 with paramiko.SSHClient() as ssh:
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     ssh.connect(hostname=args['server'], username=args['username'], key_filename=args['key_file'])
-    with ssh.open_sftp() as sftp:
-        sync(sftp, args['batch_id'], args['path'])
+    with scp.SCPClient(ssh.get_transport()) as sscp:
+        sscp.get(args['batch_id'], args['path'], recursive=True)
 for directory in os.listdir(os.path.join(args['path'], args['batch_id'])):
     shutil.move(os.path.join(args['path'], args['batch_id'], directory), os.path.join(args['path'], args['batch_id'], directory[4:]))
 print 'download done to %s' % args['path']

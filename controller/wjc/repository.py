@@ -5,19 +5,16 @@ import logging
 import shutil
 import uuid
 import redis
-from job_midwife import JobMidwife
-from job import Job
+
 from batch import Batch
 
-with open('logging.json') as jl:
-    dictConfig(json.load(jl))
 
 class JobRepository:
     def __init__(self):
         try:
+            with open('logging.json') as jl:
+                dictConfig(json.load(jl))
             self.client = redis.Redis('db')
-            self.midwife = JobMidwife(self.client)
-            self.midwife.start()
         except Exception, e:
             logging.exception('Something is fishy (%s)' % e)
 
@@ -66,6 +63,7 @@ class JobRepository:
         batch.instance_type = instance_type
         batch.max_nodes = max_nodes
         self.client.set(batch_id, pickle.dumps(batch))
+        self.client.publish('batch', batch_id)
         return batch_id
 
     def delete_batch(self, batch_id):

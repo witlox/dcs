@@ -66,11 +66,11 @@ try:
             logging.error(error_line)
     # finished
     if process.returncode != 0:
-        r = requests.post('http://[web]/wjc/jobs/[uuid]/state/failed', headers=headers)
+        r = requests.post('http://[web]/wjc/jobs/[uuid]/state/run_failed', headers=headers)
         logging.error('Job returned error code %s' % str(process.returncode))
     else:
-        r = requests.post('http://[web]/wjc/jobs/[uuid]/state/finished', headers=headers)
+        r = requests.post('http://[web]/wjc/jobs/[uuid]/state/run_succeeded', headers=headers)
         logging.info('job [uuid] done')
 except Exception, e:
     logging.exception('Failed to complete work %s' % e)
-    r = requests.post('http://[web]/wjc/jobs/[uuid]/state/failed', headers=headers)
+    r = requests.post('http://[web]/wjc/jobs/[uuid]/state/run_failed', headers=headers)

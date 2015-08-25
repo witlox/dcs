@@ -4,4 +4,3 @@ flask
 requests
 python-logstash
 boto
-paramiko

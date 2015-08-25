@@ -4,6 +4,8 @@ from flask import Flask, Response, jsonify, request
 from flask_autodoc import Autodoc
 
 from repository import JobRepository
+from job_dictator import JobDictator
+from batch_midwife import BatchMidwife
 
 app = Flask(__name__)
 auto = Autodoc(app)
@@ -12,6 +14,12 @@ app.config['REPOSITORY'] = JobRepository()
 
 if not os.path.exists('/tmp/store'):
     os.mkdir('/tmp/store')
+
+app.config['JD'] = JobDictator()
+app.config['JD'].start()
+
+app.config['BMW'] = BatchMidwife()
+app.config['BMW'].start()
 
 def __get_jobs__():
     repository = app.config['REPOSITORY']

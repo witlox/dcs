@@ -1,139 +1,162 @@
 from datetime import datetime, timedelta
+import json
 import logging
+from logging.config import dictConfig
 import threading
-from time import sleep
 import pickle
-import paramiko
+from time import sleep
+
+import redis
+
 import aws
 from settings import Settings
-from ftp_util import sync
-
-
-def terminate_worker(worker):
-    result = aws.terminate_machine(worker.instance)
-    if result is None:
-        logging.error('Could not remove worker %s, remove manually!' % worker.instance)
+from worker import Worker
 
 
 class MachineMidwife(threading.Thread):
-    def __init__(self, client):
+    """ Manages the starting of machines """
+    def __init__(self):
+        with open('logging.json') as jl:
+            dictConfig(json.load(jl))
         logging.info('starting machine midwife crisis')
         threading.Thread.__init__(self)
         self.daemon = True
         self.settings = Settings()
-        self.client = client
-        self.running = True
-
-    def halt(self):
-        self.running = False
+        if self.settings.max_instances >= aws.get_max_instances():
+            logging.error('maximum instances setting larger than your AWS EC2 capacity, this can lead to an inconsistent state!')
+        self.client = redis.Redis('db')
+        self.job_pub_sub = self.client.pubsub()
+        self.job_pub_sub.subscribe(['jobs'])
+        self.apprentice = self.Apprentice(self.client)
 
     def run(self):
-        while self.running:
-            self.poky_pokey()
-            self.check_newborn()
-            sleep(60)
-        logging.info('sending midwife home')
-
-    def check_newborn(self):
-        logging.debug('checking for machine updates')
-        for worker_id in self.client.keys('jm-*'):
-            try:
-                worker = pickle.loads(self.client.get(worker_id))
-                if not self.client.exists(worker.batch_id):
-                    if self.settings.auto_remove_failed:
-                        logging.info('found worker disconnected from batch and auto-remove on failure enabled, trying to remove %s' % worker.instance)
-                        terminate_worker(worker)
-                    else:
-                        logging.warning('found worker disconnected from batch but auto-remove on failure disabled, manually remove %s!' % worker.instance)
-                    self.client.delete(worker_id)
-                    continue
-                if not self.client.exists(worker.job_id):
-                    continue
-                job = pickle.loads(self.client.get(worker.job_id))
-                if worker.reservation is not None and worker.instance is None and job.state == 'requested':
-                    if datetime.now() - worker.request_time > timedelta(minutes=int(self.settings.aws_req_max_wait)):
-                        logging.warning('reservation %s has become stale, restarting' % worker.reservation)
-                        job.state = 'received'
-                        self.client.set(worker.job_id, pickle.dumps(job))
-                        self.client.publish('jobs', worker.job_id)
-                        self.client.delete(worker_id)
+        self.apprentice.start()
+        for item in self.job_pub_sub.listen():
+            if item['data'] == 'KILL':
+                self.apprentice.halt()
+                self.job_pub_sub.unsubscribe()
+                logging.info('sending midwife home')
+                break
+            else:
+                job_id = item['data']
+                if self.client.exists(job_id):
+                    job = pickle.loads(self.client.get(job_id))
+                    if job.state != 'received' and job.state != 'delayed':
                         continue
-                    aws_instance, ip_address = aws.my_booted_machine(worker.reservation)
-                    if aws_instance is not None and ip_address is not None:
-                        logging.info('reservation %s booted to instance %s' % (worker.reservation, aws_instance))
-                        worker.instance = aws_instance
-                        worker.ip_address = ip_address
-                        self.client.set(worker_id, pickle.dumps(worker))
-                        job.state = 'booted'
-                        self.client.set(worker.job_id, pickle.dumps(job))
-                        self.client.publish('jobs', worker.job_id)
-                elif worker.instance is not None and job.state == 'finished':
-                    logging.info('%s finished with success' % worker.job_id)
-                    self.pull(job.ami, worker.batch_id, worker.job_id, worker.ip_address, self.settings.recycle_workers)
-                    if not self.settings.recycle_workers:
-                        logging.info('recycle workers off, %s finished, shutting down machine' % worker.instance)
-                        terminate_worker(worker)
-                        self.client.delete(worker_id)
-                    else:
-                        for job_id in self.client.keys('job-*'):
-                            job = pickle.loads(self.client.get(job_id))
-                            if job.batch_id == worker.batch_id:
-                                if job.state == 'spawned':
-                                    worker.job_id = None
-                                    self.client.set(worker_id, pickle.dumps(worker))
-                                    break
-                        if worker.job_id is not None:
-                            terminate_worker(worker)
-                            self.client.delete(worker_id)
-                elif worker.instance is not None and job.state == 'failed':
-                    logging.warning('%s finished with failure' % worker.job_id)
-                    self.pull(job.ami, worker.batch_id, worker.job_id, worker.ip_address, False, True)
-                    if self.settings.auto_remove_failed:
-                        logging.info('auto-remove on failure enabled, trying to remove %s' % worker.instance)
-                        terminate_worker(worker)
-                    else:
-                        logging.warning('auto-remove on failure disabled, manually remove %s!' % worker.instance)
-                    self.client.delete(worker_id)
-            except Exception, e:
-                logging.exception('but not going to break our machine midwife (%s)' % e)
+                    queue_full = self.choke_full()
+                    # refresh job, the previous call can take some time and the state can become stale
+                    if not self.client.exists(job_id):
+                        continue
+                    job = pickle.loads(self.client.get(job_id))
+                    if job.state == 'received' or (job.state == 'delayed' and not queue_full):
+                        recycled = False
+                        for worker_id in self.client.keys('jm-*'):
+                            existing_worker = pickle.loads(self.client.get(worker_id))
+                            if existing_worker.batch_id == job.batch_id and existing_worker.job_id is None:
+                                job.state = 'booted'
+                                existing_worker.job_id = job_id
+                                self.client.set(worker_id, pickle.dumps(existing_worker))
+                                self.client.set(job_id, pickle.dumps(job))
+                                self.client.publish('jobs', job_id)
+                                recycled = True
+                                break
+                        if recycled:
+                            continue
+                        if not queue_full:
+                            worker_id, reservation = aws.start_machine(job.ami, job.instance_type)
+                            if worker_id:
+                                job.state = 'requested'
+                                worker = Worker(job_id, job.batch_id)
+                                worker.request_time = datetime.now()
+                                worker.reservation = reservation
+                                self.client.set(worker_id, pickle.dumps(worker))
+                            else:
+                                job.state = 'failed'
+                            self.client.set(job_id, pickle.dumps(job))
+                            self.client.publish('jobs', job_id)
+                        else:
+                            job.state = 'delayed'
+                            self.client.set(job_id, pickle.dumps(job))
 
-    def poky_pokey(self):
-        logging.debug('clean up lingering machines')
-        for batch_id in self.client.keys('batch-*'):
-            try:
-                batch = pickle.loads(self.client.get(batch_id))
-                if not batch.jobs:
-                    continue
-                are_we_there_yet = True
-                for job_id in pickle.loads(batch.jobs):
-                    if self.client.exists(job_id):
-                        job = pickle.loads(self.client.get(job_id))
-                        if job.state == 'spawned':
-                            are_we_there_yet = False
-                            break
-                if are_we_there_yet:
-                    for worker_id in self.client.keys('jm-*'):
-                        worker = pickle.loads(self.client.get(worker_id))
-                        if worker.job_id is None:
-                            terminate_worker(worker)
-                            self.client.delete(worker_id)
-            except Exception, e:
-                logging.exception('something failed (%s)' % e)
+    def choke_full(self):
+        instances = self.waldos()
+        queue_full = False
+        count = aws.active_instance_count()
+        max_instances = aws.get_max_instances()
+        max_storage = aws.get_storage_usage(instances)
+        if count is not None and max_instances is not None and count >= max_instances:
+            logging.warning('you are currently using your maximum AWS EC2 capacity (%d/%d)' % (count, max_instances))
+            queue_full = True
+        if len(instances) >= self.settings.max_instances:
+            logging.warning('maximum (%d) amount of instances in use (%d), delaying start of new worker' % (len(instances), self.settings.max_instances))
+            queue_full = True
+        if max_storage is not None and max_storage >= self.settings.max_storage:
+            logging.warning('maximum (%d) amount of storage in use (%d), delaying start of new worker' % (max_storage, self.settings.max_storage))
+            queue_full = True
+        return queue_full
 
-    def pull(self, ami, batch_id, job_id, ip_address, clean=True, failed=False):
-        with paramiko.SSHClient() as ssh:
-            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            username, key_file = pickle.loads(self.client.get(ami))
-            logging.info('establishing connection to %s using user %s' % (ip_address, username))
-            with open('%s.key' % job_id, 'wb') as hairy:
-                hairy.write(key_file)
-            ssh.connect(hostname=ip_address, username=username, key_filename='%s.key' % job_id)
-            with ssh.open_sftp() as sftp:
-                destination = '/tmp/store/%s/%s' % (batch_id, job_id)
-                if failed:
-                    destination += '_failed'
-                sync(sftp, job_id, destination)
-            if clean:
-                ssh.exec_command('rm -rf %s' % job_id)
-                ssh.exec_command('rm -f %s.sh' % job_id)
-            logging.info('transferred results for %s, saved to %s' % (job_id, destination))
+    def waldos(self):
+        instances = []
+        for worker_id in self.client.keys('jm-*'):
+            existing_worker = pickle.loads(self.client.get(worker_id))
+            if existing_worker.instance is not None:
+                instances.append(existing_worker.instance)
+        return instances
+
+    class Apprentice(threading.Thread):
+        """ responsible for managing request delays, stale requests and booted state machines """
+        def __init__(self, client):
+            logging.debug('machine apprentice peeking')
+            threading.Thread.__init__(self)
+            self.daemon = True
+            self.client = client
+            self.settings = Settings()
+            self.running = True
+
+        def halt(self):
+            self.running = False
+
+        def run(self):
+            while self.running:
+                self.rise_and_shine()
+                self.check_newborn()
+                sleep(60)
+
+        def rise_and_shine(self):
+            logging.debug('checking for delays to signal')
+            signaled = 0
+            instances = []
+            for worker_id in self.client.keys('jm-*'):
+                existing_worker = pickle.loads(self.client.get(worker_id))
+                if existing_worker.instance is not None:
+                    instances.append(existing_worker.instance)
+            for job_id in self.client.keys('job-*'):
+                job = pickle.loads(self.client.get(job_id))
+                if job.state == 'delayed':
+                    if len(instances) + signaled < self.settings.max_instances:
+                        self.client.publish('jobs', job_id)
+                        signaled += 1
+
+        def check_newborn(self):
+            logging.debug('checking for machine updates')
+            for worker_id in self.client.keys('jm-*'):
+                worker = pickle.loads(self.client.get(worker_id))
+                if self.client.exists(worker.job_id):
+                    job = pickle.loads(self.client.get(worker.job_id))
+                    if worker.reservation is not None and worker.instance is None and job.state == 'requested':
+                        if datetime.now() - worker.request_time > timedelta(minutes=int(self.settings.aws_req_max_wait)):
+                            logging.warning('reservation %s has become stale, restarting' % worker.reservation)
+                            job.state = 'received'
+                            self.client.set(worker.job_id, pickle.dumps(job))
+                            self.client.publish('jobs', worker.job_id)
+                            self.client.delete(worker_id)
+                            continue
+                        aws_instance, ip_address = aws.my_booted_machine(worker.reservation)
+                        if aws_instance is not None and ip_address is not None:
+                            logging.info('reservation %s booted to instance %s' % (worker.reservation, aws_instance))
+                            worker.instance = aws_instance
+                            worker.ip_address = ip_address
+                            self.client.set(worker_id, pickle.dumps(worker))
+                            job.state = 'booted'
+                            self.client.set(worker.job_id, pickle.dumps(job))
+                            self.client.publish('jobs', worker.job_id)

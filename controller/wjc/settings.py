@@ -16,3 +16,4 @@ class Settings:
         parser.read('wjc.conf')
         self.web = parser.get('parameters', 'web')
         self.elk = parser.get('parameters', 'elk')
+        self.job_timeout = parser.getint('parameters', 'job_timeout')
