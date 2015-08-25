@@ -182,8 +182,7 @@ class TestIlm(unittest.TestCase):
 
         apprentice = Apprentice()
         apprentice.settings = mock.MagicMock()
-        apprentice.settings.max_instances = mock.MagicMock()
-        apprentice.settings.max_instances.return_value = 1
+        apprentice.settings.max_instances = 1
         apprentice.client = mock.MagicMock()
         apprentice.client.exists.return_value = True
         job = Job('delayed', 'batch-')
