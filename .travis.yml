@@ -3,7 +3,6 @@ language: python
 # supported language versions
 python:
   - "2.7"
-  - "pypy"
 # dependency install
 install:
   - "pip install -r controller/ilm/requirements.txt"
