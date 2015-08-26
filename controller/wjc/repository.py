@@ -97,5 +97,6 @@ class JobRepository:
                 batch = pickle.loads(self.client.get(batch_id))
                 batch.state = state
                 self.client.set(batch_id, pickle.dumps(batch))
+                self.client.publish('batch', batch_id)
                 return 'ok'
         return 'not a batch'
