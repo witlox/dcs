@@ -35,16 +35,21 @@ with paramiko.SSHClient() as ssh:
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     ssh.connect(hostname=args['server'], username=args['username'], key_filename=args['key_file'])
     with scp.SCPClient(ssh.get_transport()) as sscp:
+        ssh.exec_command('mkdir %s'% batch_id)
         for directory in actual_directories:
             if os.path.isdir(directory):
                 if os.path.isfile(os.path.join(directory, 'run')):
+                    remote_dir = '%s/jobs%s' % (batch_id, os.path.basename(os.path.normpath(directory)))
+                    ssh.exec_command('mkdir %s' % remote_dir)
                     print 'S1. syncing %s to %s/job-%s' % (directory, batch_id, os.path.basename(os.path.normpath(directory)))
-                    sscp.put(directory, '%s/jobs%s' % (batch_id, os.path.basename(os.path.normpath(directory))), recursive=True)
+                    sscp.put(directory, remote_dir, recursive=True)
                 else:
                     os.chdir(directory)
                     for subdir in os.listdir('.'):
                         if os.path.isfile(os.path.join(subdir, 'run')):
+                            remote_subdir = '%s/job-%s' % (batch_id, os.path.basename(os.path.normpath(subdir)))
+                            ssh.exec_command('mkdir %s' % remote_subdir)
                             print 'S2. syncing %s to %s/job-%s' % (subdir, batch_id, os.path.basename(os.path.normpath(subdir)))
-                            sscp.put(subdir, '%s/job-%s' % (batch_id, os.path.basename(os.path.normpath(subdir))), recursive=True)
+                            sscp.put(subdir, remote_subdir, recursive=True)
 r = requests.post('http://%s/wjc/batch/%s/state/uploaded' % (args['server'], batch_id), headers={'User-agent': 'Luke/1.0'})
 print r.content

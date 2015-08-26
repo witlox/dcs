@@ -91,6 +91,7 @@ class JobDictator(threading.Thread):
             ssh.connect(hostname=worker.ip_address, username=username, key_filename='%s.key' % job_id)
             with scp.SCPClient(ssh.get_transport()) as s_scp:
                 luke = '/tmp/store/%s/%s' % (batch_id, job_id)
+                ssh.exec_command('mkdir %s' % job_id)
                 s_scp.put(luke, job_id, recursive=True)
                 s_scp.put(ramon_file, ramon_file)
             ssh.exec_command('chmod +x %s' % ramon_file)

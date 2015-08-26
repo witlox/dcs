@@ -35,9 +35,11 @@ class BatchMidwife(threading.Thread):
                 break
             else:
                 batch_id = item['data']
+                logging.debug(batch_id)
                 if not self.client.exists(batch_id):
                     continue
                 batch = pickle.loads(self.client.get(batch_id))
+                logging.info('%s has state %s' % (batch_id, batch.state))
                 if batch.state != 'uploaded':
                     continue
                 if not batch.jobs:
