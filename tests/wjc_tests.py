@@ -55,7 +55,7 @@ class TestWjc(unittest.TestCase):
         self.request_mock.get.return_value = returner
         dictator.push = mock.MagicMock()
 
-        dictator.run()
+        dictator.aladeen()
 
         assert dictator.client.keys.call_count == 2
         assert dictator.client.get.call_count == 2
@@ -82,7 +82,7 @@ class TestWjc(unittest.TestCase):
         self.request_mock.get.return_value = returner
         dictator.pull = mock.MagicMock()
 
-        dictator.run()
+        dictator.aladeen()
 
         assert dictator.client.keys.call_count == 2
         assert dictator.client.get.call_count == 2
@@ -113,7 +113,7 @@ class TestWjc(unittest.TestCase):
         self.request_mock.get.return_value = returner
         dictator.pull = mock.MagicMock()
 
-        dictator.run()
+        dictator.aladeen()
 
         assert dictator.client.keys.call_count == 2
         assert dictator.client.get.call_count == 2

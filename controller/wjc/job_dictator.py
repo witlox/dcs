@@ -26,8 +26,9 @@ class JobDictator(threading.Thread):
         self.headers = {'User-agent': 'dcs_wjc/1.0'}
         self.settings = Settings()
         self.client = redis.Redis('db')
+        self.running = True
 
-    def run(self):
+    def aladeen(self):
         for job_id in self.client.keys('job-*'):
             job = pickle.loads(self.client.get(job_id))
             if job.state != 'booted' and job.state != 'running' and job.state != 'run_succeeded' and job.state != 'run_failed':
@@ -40,7 +41,8 @@ class JobDictator(threading.Thread):
                         worker = temp_worker
                 if job.state == 'booted':
                     # check if state is ok
-                    ami_status = requests.get('http://%s/ilm/ami/%s/status' % (self.settings.web, worker.instance), headers=self.headers)
+                    ami_status = requests.get('http://%s/ilm/ami/%s/status' % (self.settings.web, worker.instance),
+                                              headers=self.headers)
                     if 'status:ok' not in ami_status.content.lower():
                         logging.info('AMI (%s) status (%s) NOK, waiting...' % (worker.instance, ami_status.content))
                         continue
@@ -65,7 +67,11 @@ class JobDictator(threading.Thread):
                 self.client.set(job_id, pickle.dumps(job))
                 self.client.publish('jobs', job_id)
                 logging.exception('failure in %s, failing job (%s)' % (job_id, e))
-        sleep(60)
+
+    def run(self):
+        while self.running:
+            self.aladeen()
+            sleep(60)
 
     def push(self, ami, batch_id, job_id, worker):
         logging.info('found job to transmit to worker %s, preparing script' % job_id)
