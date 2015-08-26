@@ -14,8 +14,8 @@ This service consist of 2 working parts
 Part 1 is meant to be run on Amazon, part 2 is meant to be run at your local site (where you have the input data for your simulation and where the result ends up).
 
 To start the system:
-- check if your AWS firewall settings allow the forwarded ports (22/80/5000/9200/9300)
-- Launch an Amazon image (basic Amazon Linux instance is sufficient)
+- check if your AWS firewall settings allow the forwarded ports (22/80 for external connections, 22/5000/9200/9300 for worker/controller communication)
+- Launch an Amazon image (basic Amazon Linux instance is sufficient, scale the type according to concurrent workload and have a sufficiently large disk)
 - sudo yum update -y
 - sudo yum install -y docker
 - sudo yum install -y git
@@ -31,6 +31,9 @@ To start the system:
 
 The internal mechanics are explained in the readme in the controller directory.
 
-As a user, you will need to download the source directory to your local machine. The usage of the scripts are explained in the readme in the source directory.
+The example folder contains a simple example of how to run jobs on Amazon.
+
+As a user, you will need to download the source directory to your local machine. 
+The usage of the scripts is explained in the readme in the source directory.
 
 Good luck!
