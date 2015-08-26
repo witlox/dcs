@@ -98,7 +98,10 @@ class JobDictator(threading.Thread):
             with scp.SCPClient(ssh.get_transport()) as s_scp:
                 luke = '/tmp/store/%s/%s' % (batch_id, job_id)
                 ssh.exec_command('mkdir %s' % job_id)
-                s_scp.put(luke, job_id, recursive=True)
+                here = os.getcwd()
+                os.chdir(luke)
+                s_scp.put('.', job_id, recursive=True)
+                os.chdir(here)
                 s_scp.put(ramon_file, ramon_file)
             ssh.exec_command('chmod +x %s' % ramon_file)
             start = 'virtualenv venv\nsource venv/bin/activate\npip install python-logstash requests\nnohup ./%s  > /dev/null 2>&1 &\n' % ramon_file

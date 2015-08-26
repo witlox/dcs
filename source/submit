@@ -37,19 +37,27 @@ with paramiko.SSHClient() as ssh:
     with scp.SCPClient(ssh.get_transport()) as sscp:
         ssh.exec_command('mkdir %s'% batch_id)
         for directory in actual_directories:
+            directory = directory.replace('\\\\', '/')
+            directory = directory.replace('\\', '/')
             if os.path.isdir(directory):
                 if os.path.isfile(os.path.join(directory, 'run')):
-                    remote_dir = '%s/jobs%s' % (batch_id, os.path.basename(os.path.normpath(directory)))
+                    remote_dir = '%s/job-%s/' % (batch_id, os.path.basename(os.path.normpath(directory)))
                     ssh.exec_command('mkdir %s' % remote_dir)
-                    print 'S1. syncing %s to %s/job-%s' % (directory, batch_id, os.path.basename(os.path.normpath(directory)))
-                    sscp.put(directory, remote_dir, recursive=True)
+                    print 'S1. syncing %s to %s/job-%s/' % (directory, batch_id, os.path.basename(os.path.normpath(directory)))
+                    here = os.getcwd()
+                    os.chdir(directory)
+                    sscp.put('.', remote_dir, recursive=True)
+                    os.chdir(here)
                 else:
                     os.chdir(directory)
                     for subdir in os.listdir('.'):
                         if os.path.isfile(os.path.join(subdir, 'run')):
-                            remote_subdir = '%s/job-%s' % (batch_id, os.path.basename(os.path.normpath(subdir)))
+                            remote_subdir = '%s/job-%s/' % (batch_id, os.path.basename(os.path.normpath(subdir)))
                             ssh.exec_command('mkdir %s' % remote_subdir)
-                            print 'S2. syncing %s to %s/job-%s' % (subdir, batch_id, os.path.basename(os.path.normpath(subdir)))
-                            sscp.put(subdir, remote_subdir, recursive=True)
+                            print 'S2. syncing %s to %s/job-%s/' % (subdir, batch_id, os.path.basename(os.path.normpath(subdir)))
+                            here = os.getcwd()
+                            os.chdir(subdir)
+                            sscp.put('.', remote_subdir, recursive=True)
+                            os.chdir(here)
 r = requests.post('http://%s/wjc/batch/%s/state/uploaded' % (args['server'], batch_id), headers={'User-agent': 'Luke/1.0'})
 print r.content
