@@ -5,7 +5,6 @@ import os
 import stat
 import subprocess
 from logging.config import dictConfig, logging
-
 import requests
 
 dictConfig({

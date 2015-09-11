@@ -22,9 +22,11 @@ app.config['MM'].start()
 app.config['CSU'] = Consuela()
 app.config['CSU'].start()
 
+
 def __get_amis__():
     repository = app.config['REPOSITORY']
     return Response(dumps(repository.get_all_amis()), mimetype='application/json')
+
 
 def __get_ami_status__(aid):
     status = aws.get_status(aid)
@@ -32,11 +34,13 @@ def __get_ami_status__(aid):
         return Response(dumps(str(status)), mimetype='application/json')
     raise ApplicationException('Could not get status for %s' % aid)
 
+
 def __add_amis__(wrequest):
     data = wrequest.get_json(force=True)
     repository = app.config['REPOSITORY']
     aid = repository.insert_ami(data['name'], data['username'], data['private_key'])
     return Response(dumps(aid), mimetype='application/json')
+
 
 def __remove_amis__(name):
     repository = app.config['REPOSITORY']
@@ -46,15 +50,18 @@ def __remove_amis__(name):
     else:
         raise ApplicationException('Could not delete %s' % name)
 
+
 def __get_all_workers__():
     repository = app.config['REPOSITORY']
     return Response(dumps(repository.get_all_workers()), mimetype='application/json')
+
 
 # actual api :P
 
 @app.route('/')
 def documentation():
     return auto.html()
+
 
 @app.route('/amis', methods=['GET'])
 @auto.doc()
@@ -79,11 +86,13 @@ def add_amis():
     """
     return __add_amis__(request)
 
+
 @app.route('/amis/<name>', methods=['DELETE'])
 @auto.doc()
 def remove_amis(name):
     """ unregister an AMI """
     return __remove_amis__(name)
+
 
 @app.route('/workers', methods=['GET'])
 @auto.doc()
@@ -107,6 +116,7 @@ class ApplicationException(Exception):
         rv = dict(self.payload or ())
         rv['message'] = self.message
         return rv
+
 
 @app.errorhandler(ApplicationException)
 def handle_application_exception(error):

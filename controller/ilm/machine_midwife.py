@@ -5,9 +5,7 @@ from logging.config import dictConfig
 import threading
 import pickle
 from time import sleep
-
 import redis
-
 import aws
 from settings import Settings
 from worker import Worker

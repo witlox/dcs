@@ -6,8 +6,8 @@ import os
 with open('logging.json') as jl:
     dictConfig(json.load(jl))
 
-class Settings:
 
+class Settings:
     def __init__(self):
         if not os.path.exists('wjc.conf'):
             logging.error('we need a valid config, none found!')

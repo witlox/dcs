@@ -5,7 +5,6 @@ import logging
 import shutil
 import uuid
 import redis
-
 from batch import Batch
 
 
