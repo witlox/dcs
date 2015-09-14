@@ -134,7 +134,7 @@ class TestWjc(unittest.TestCase):
         midwife.apprentice = mock.MagicMock()
         midwife.client = mock.MagicMock()
         midwife.job_pub_sub = mock.MagicMock()
-        midwife.job_pub_sub.listen.return_value = [{'data': 'test'}]
+        midwife.job_pub_sub.listen.return_value = [{'data': 'batch-lovelyhashcode'}]
         midwife.client.exists.return_value = True
         batch = Batch('uploaded')
         midwife.client.get.return_value = pickle.dumps(batch)
@@ -147,8 +147,8 @@ class TestWjc(unittest.TestCase):
         assert midwife.client.get.call_count == 1
         assert midwife.client.set.call_count == 4
         assert midwife.client.publish.call_count == 2
-        assert midwife.client.set.call_args_list[1][0][0] == 'job-dir1'
-        assert midwife.client.set.call_args_list[2][0][0] == 'job-dir2'
+        assert midwife.client.set.call_args_list[1][0][0] == 'job-dir1batch-lovelyhashcode'
+        assert midwife.client.set.call_args_list[2][0][0] == 'job-dir2batch-lovelyhashcode'
         assert pickle.loads(midwife.client.set.call_args_list[3][0][1]).state == 'running'
         assert self.os_mock.listdir.call_count == 1
 

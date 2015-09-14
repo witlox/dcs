@@ -32,39 +32,38 @@ class Consuela(threading.Thread):
 
     def run(self):
         for item in self.job_pub_sub.listen():
-            if item['data'] == 'KILL':
+            job_id = item['data']
+            if job_id == 'KILL':
                 self.job_pub_sub.unsubscribe()
                 logging.info('consuela no home')
-                break
+                return
+            worker_id, worker = self.get_worker(job_id)
+            if worker and self.client.exists(job_id):
+                job = pickle.loads(self.client.get(job_id))
+                if job.state == 'finished' and worker.instance is not None:
+                    if not self.settings.recycle_workers:
+                        logging.info('recycle workers off, %s finished, shutting down machine' % worker.instance)
+                        terminate_worker(worker_id, worker.instance, self.client)
+                    else:
+                        if self.recycle_worker(job_id, job):
+                            logging.info('going to recycle worker %s' % worker.instance)
+                            worker.job_id = None
+                            self.client.set(worker_id, pickle.dumps(worker))
+                        else:
+                            logging.info('no work left for %s, shutting down machine' % worker.instance)
+                            terminate_worker(worker_id, worker.instance, self.client)
+                elif job.state == 'failed' and worker.instance is not None:
+                    logging.warning('%s finished with failure' % job_id)
+                    if self.settings.auto_remove_failed:
+                        logging.info('auto-remove on failure enabled, trying to remove %s' % worker.instance)
+                        terminate_worker(worker_id, worker.instance, self.client)
+                    else:
+                        logging.warning('auto-remove on failure disabled, manually remove %s!' % worker.instance)
+                    self.client.delete(worker_id)
+            elif worker_id and worker and worker.instance:
+                terminate_worker(worker_id, worker.instance, self.client)
             else:
-                job_id = item['data']
-                worker_id, worker = self.get_worker(job_id)
-                if worker and self.client.exists(job_id):
-                    job = pickle.loads(self.client.get(job_id))
-                    if job.state == 'finished' and worker.instance is not None:
-                        if not self.settings.recycle_workers:
-                            logging.info('recycle workers off, %s finished, shutting down machine' % worker.instance)
-                            terminate_worker(worker_id, worker.instance, self.client)
-                        else:
-                            if self.recycle_worker(job_id, job):
-                                logging.info('going to recycle worker %s' % worker.instance)
-                                worker.job_id = None
-                                self.client.set(worker_id, pickle.dumps(worker))
-                            else:
-                                logging.info('no work left for %s, shutting down machine' % worker.instance)
-                                terminate_worker(worker_id, worker.instance, self.client)
-                    elif job.state == 'failed' and worker.instance is not None:
-                        logging.warning('%s finished with failure' % job_id)
-                        if self.settings.auto_remove_failed:
-                            logging.info('auto-remove on failure enabled, trying to remove %s' % worker.instance)
-                            terminate_worker(worker_id, worker.instance, self.client)
-                        else:
-                            logging.warning('auto-remove on failure disabled, manually remove %s!' % worker.instance)
-                        self.client.delete(worker_id)
-                elif worker_id and worker and worker.instance:
-                    terminate_worker(worker_id, worker.instance, self.client)
-                else:
-                    logging.debug('no worker found for %s' % job_id)
+                logging.debug('no worker found for %s' % job_id)
 
     def get_worker(self, job_id):
         for worker_id in self.client.keys('jm-*'):

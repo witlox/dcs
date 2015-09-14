@@ -15,7 +15,7 @@ class JobRepository:
                 dictConfig(json.load(jl))
             self.client = redis.Redis('db')
         except Exception, e:
-            logging.exception('Something is fishy (%s)' % e)
+            logging.exception('Problem instantiating batch/job repository (%s)' % e)
 
     def get_all_jobs(self):
         result = []
@@ -45,7 +45,7 @@ class JobRepository:
                 return 'job not found'
         return 'not a job'
 
-    def get_all_batch(self):
+    def get_all_batches(self):
         result = []
         for batch_key in self.client.keys('batch-*'):
             batch = pickle.loads(self.client.get(batch_key))
@@ -62,7 +62,7 @@ class JobRepository:
         batch.instance_type = instance_type
         batch.max_nodes = max_nodes
         self.client.set(batch_id, pickle.dumps(batch))
-        self.client.publish('batch', batch_id)
+        self.client.publish('batches', batch_id)
         return batch_id
 
     def delete_batch(self, batch_id):
@@ -96,6 +96,6 @@ class JobRepository:
                 batch = pickle.loads(self.client.get(batch_id))
                 batch.state = state
                 self.client.set(batch_id, pickle.dumps(batch))
-                self.client.publish('batch', batch_id)
+                self.client.publish('batches', batch_id)
                 return 'ok'
         return 'not a batch'

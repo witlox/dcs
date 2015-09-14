@@ -29,7 +29,7 @@ def __get_jobs__():
 
 def __get_batch__():
     repository = app.config['REPOSITORY']
-    return Response(dumps(repository.get_all_batch()), mimetype='application/json')
+    return Response(dumps(repository.get_all_batches()), mimetype='application/json')
 
 
 def __get_job_state__(name):

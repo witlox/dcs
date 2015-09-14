@@ -30,51 +30,50 @@ class MachineMidwife(threading.Thread):
     def run(self):
         self.apprentice.start()
         for item in self.job_pub_sub.listen():
-            if item['data'] == 'KILL':
+            job_id = item['data']
+            if job_id == 'KILL':
                 self.apprentice.halt()
                 self.job_pub_sub.unsubscribe()
                 logging.info('sending midwife home')
-                break
-            else:
-                job_id = item['data']
-                if self.client.exists(job_id):
-                    job = pickle.loads(self.client.get(job_id))
-                    if job.state != 'received' and job.state != 'delayed':
-                        continue
-                    queue_full = self.choke_full()
-                    # refresh job, the previous call can take some time and the state can become stale
-                    if not self.client.exists(job_id):
-                        continue
-                    job = pickle.loads(self.client.get(job_id))
-                    if job.state == 'received' or (job.state == 'delayed' and not queue_full):
-                        recycled = False
-                        for worker_id in self.client.keys('jm-*'):
-                            existing_worker = pickle.loads(self.client.get(worker_id))
-                            if existing_worker.batch_id == job.batch_id and existing_worker.job_id is None:
-                                job.state = 'booted'
-                                existing_worker.job_id = job_id
-                                self.client.set(worker_id, pickle.dumps(existing_worker))
-                                self.client.set(job_id, pickle.dumps(job))
-                                self.client.publish('jobs', job_id)
-                                recycled = True
-                                break
-                        if recycled:
-                            continue
-                        if not queue_full:
-                            worker_id, reservation = aws.start_machine(job.ami, job.instance_type)
-                            if worker_id:
-                                job.state = 'requested'
-                                worker = Worker(job_id, job.batch_id)
-                                worker.request_time = datetime.now()
-                                worker.reservation = reservation
-                                self.client.set(worker_id, pickle.dumps(worker))
-                            else:
-                                job.state = 'failed'
+                return
+            if self.client.exists(job_id):
+                job = pickle.loads(self.client.get(job_id))
+                if job.state != 'received' and job.state != 'delayed':
+                    continue
+                queue_full = self.choke_full()
+                # refresh job, the previous call can take some time and the state can become stale
+                if not self.client.exists(job_id):
+                    continue
+                job = pickle.loads(self.client.get(job_id))
+                if job.state == 'received' or (job.state == 'delayed' and not queue_full):
+                    recycled = False
+                    for worker_id in self.client.keys('jm-*'):
+                        existing_worker = pickle.loads(self.client.get(worker_id))
+                        if existing_worker.batch_id == job.batch_id and existing_worker.job_id is None:
+                            job.state = 'booted'
+                            existing_worker.job_id = job_id
+                            self.client.set(worker_id, pickle.dumps(existing_worker))
                             self.client.set(job_id, pickle.dumps(job))
                             self.client.publish('jobs', job_id)
+                            recycled = True
+                            break
+                    if recycled:
+                        continue
+                    if not queue_full:
+                        worker_id, reservation = aws.start_machine(job.ami, job.instance_type)
+                        if worker_id:
+                            job.state = 'requested'
+                            worker = Worker(job_id, job.batch_id)
+                            worker.request_time = datetime.now()
+                            worker.reservation = reservation
+                            self.client.set(worker_id, pickle.dumps(worker))
                         else:
-                            job.state = 'delayed'
-                            self.client.set(job_id, pickle.dumps(job))
+                            job.state = 'failed'
+                        self.client.set(job_id, pickle.dumps(job))
+                        self.client.publish('jobs', job_id)
+                    else:
+                        job.state = 'delayed'
+                        self.client.set(job_id, pickle.dumps(job))
 
     def choke_full(self):
         instances = self.waldos()

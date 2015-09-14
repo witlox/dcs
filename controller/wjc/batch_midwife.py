@@ -22,7 +22,7 @@ class BatchMidwife(threading.Thread):
         self.settings = Settings()
         self.client = redis.Redis('db')
         self.job_pub_sub = self.client.pubsub()
-        self.job_pub_sub.subscribe(['batch'])
+        self.job_pub_sub.subscribe(['batches'])
         self.apprentice = self.Apprentice(self.client)
 
     def run(self):
@@ -43,7 +43,8 @@ class BatchMidwife(threading.Thread):
                 if batch.state != 'uploaded':
                     continue
                 if not batch.jobs:
-                    batch.jobs = pickle.dumps(os.listdir('/tmp/store/%s' % batch_id))
+                    unique_jobs = [ajob+batch_id for ajob in os.listdir('/tmp/store/%s' % batch_id)]
+                    batch.jobs = pickle.dumps(unique_jobs)
                     self.client.set(batch_id, pickle.dumps(batch))
                     for job_id in pickle.loads(batch.jobs):
                         job = Job('spawned', batch_id)
@@ -56,6 +57,7 @@ class BatchMidwife(threading.Thread):
 
     class Apprentice(threading.Thread):
         """ responsible for managing running batch state """
+
         def __init__(self, client):
             logging.debug('batch apprentice peeking')
             threading.Thread.__init__(self)
