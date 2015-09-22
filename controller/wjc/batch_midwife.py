@@ -52,7 +52,8 @@ class BatchMidwife(threading.Thread):
                         while scallywag in self.client.keys():
                             bumboo += 1
                             scallywag = scallywag[:-(len(str(bumboo-1)))]+str(bumboo)
-                        shutil.move('/tmp/store/%s/%s' % (batch_id, debutante), '/tmp/store/%s/%s' % (batch_id, scallywag))
+                        if scallywag != debutante:
+                            shutil.move('/tmp/store/%s/%s' % (batch_id, debutante), '/tmp/store/%s/%s' % (batch_id, scallywag))
                         carousers.append(scallywag)
                     batch.jobs = pickle.dumps(carousers)
                     self.client.set(batch_id, pickle.dumps(batch))
