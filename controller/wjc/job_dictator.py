@@ -74,7 +74,6 @@ class JobDictator(threading.Thread):
             sleep(60)
 
     def push(self, ami, batch_id, job_id, worker):
-        job_id = job_id.replace(batch_id, "")
         logging.info('found job to transmit to worker %s, preparing script' % job_id)
         ramon = None
         with open('ramon.py', 'r') as r:
@@ -119,7 +118,6 @@ class JobDictator(threading.Thread):
         logging.info('started %s on %s' % (job_id, worker.instance))
 
     def pull(self, ami, batch_id, job_id, worker, clean=True, failed=False):
-        job_id = job_id.replace(batch_id, "")
         destination = '/tmp/store/%s/%s' % (batch_id, job_id)
         if os.path.exists(destination):
             shutil.rmtree(destination)
