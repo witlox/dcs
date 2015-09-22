@@ -73,12 +73,17 @@ class Consuela(threading.Thread):
         return None, None
 
     def recycle_worker(self, job_id, job):
-        if job.batch_id is not None and self.client.exists(job.batch_id):
-            batch = pickle.loads(self.client.get(job.batch_id))
-            for batch_job_id in batch.jobs:
-                if batch_job_id != job_id:
-                    if self.client.exists(batch_job_id):
-                        batch_job = pickle.loads(batch_job_id)
-                        if batch_job.state == 'spawned' or batch_job.state == 'received' or batch_job.state == 'delayed':
-                            return True
+        if job.batch_id is None or not self.client.exists(job.batch_id):
+            logging.info('could not find a "real" batch id for %s' % job.batch_id)
+            return False
+        batch = pickle.loads(self.client.get(job.batch_id))
+        for batch_job_id in batch.jobs:
+            logging.debug('have job %s in batch %s' % (batch_job_id, job.batch_id))
+            if batch_job_id != job_id:
+                logging.debug('found other job in batch, checking state')
+                if self.client.exists(batch_job_id):
+                    batch_job = pickle.loads(batch_job_id)
+                    logging.debug('state is %s (for %s)' % (batch_job.state, batch_job_id))
+                    if batch_job.state == 'spawned' or batch_job.state == 'received' or batch_job.state == 'delayed':
+                        return True
         return False
