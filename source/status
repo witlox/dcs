@@ -3,7 +3,7 @@
 import argparse
 import requests
 
-parser = argparse.ArgumentParser(description='get job status from wjc')
+parser = argparse.ArgumentParser(description='get job status from wjc; note that we append _N to jobs to ensure uniqueness')
 
 parser.add_argument('server', help='specifiy the web server address')
 parser.add_argument('code', help='code you got from submit')

@@ -25,7 +25,8 @@ class TestWjc(unittest.TestCase):
             'json': mock.MagicMock(),
             'logging.config': mock.MagicMock(),
             'redis': mock.MagicMock(),
-            'time': mock.MagicMock()
+            'time': mock.MagicMock(),
+            'shutil': mock.MagicMock()
         }
 
         self.module_patcher = mock.patch.dict('sys.modules', modules)
@@ -147,8 +148,8 @@ class TestWjc(unittest.TestCase):
         assert midwife.client.get.call_count == 1
         assert midwife.client.set.call_count == 4
         assert midwife.client.publish.call_count == 2
-        assert midwife.client.set.call_args_list[1][0][0] == 'job-dir1batch-lovelyhashcode'
-        assert midwife.client.set.call_args_list[2][0][0] == 'job-dir2batch-lovelyhashcode'
+        assert midwife.client.set.call_args_list[1][0][0] == 'job-dir1_1'
+        assert midwife.client.set.call_args_list[2][0][0] == 'job-dir2_1'
         assert pickle.loads(midwife.client.set.call_args_list[3][0][1]).state == 'running'
         assert self.os_mock.listdir.call_count == 1
 

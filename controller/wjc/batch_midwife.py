@@ -6,6 +6,7 @@ import pickle
 import threading
 from time import sleep
 import redis
+import shutil
 
 from settings import Settings
 from job import Job
@@ -43,8 +44,17 @@ class BatchMidwife(threading.Thread):
                 if batch.state != 'uploaded':
                     continue
                 if not batch.jobs:
-                    unique_jobs = [ajob+batch_id for ajob in os.listdir('/tmp/store/%s' % batch_id)]
-                    batch.jobs = pickle.dumps(unique_jobs)
+                    debutantes = os.listdir('/tmp/store/%s' % batch_id)
+                    carousers = []
+                    for debutante in debutantes:
+                        bumboo = 1
+                        scallywag = debutante+"_"+str(bumboo)
+                        while scallywag in self.client.keys():
+                            bumboo += 1
+                            scallywag = scallywag[:-(len(bumboo-1))]+str(bumboo)
+                        shutil.move('/tmp/store/%s/%s' % (batch_id, debutante), '/tmp/store/%s/%s' % (batch_id, scallywag))
+                        carousers.append(scallywag)
+                    batch.jobs = pickle.dumps(carousers)
                     self.client.set(batch_id, pickle.dumps(batch))
                     for job_id in pickle.loads(batch.jobs):
                         job = Job('spawned', batch_id)
@@ -76,20 +86,22 @@ class BatchMidwife(threading.Thread):
                         continue
                     finished = 0
                     current = 0
+                    pending = 0
                     failed = 0
                     for job_id in pickle.loads(batch.jobs):
                         if self.client.exists(job_id):
                             job = pickle.loads(self.client.get(job_id))
-                            if job.state == 'received' or job.state == 'requested' or \
-                                    job.state == 'delayed' or job.state == 'booted' or \
-                                    job.state == 'running' or job.state == 'run_succeeded' or \
-                                    job.state == 'run_failed':
+                            if job.state == 'received' or job.state == 'requested' or job.state == 'booted' or \
+                               job.state == 'running' or job.state == 'run_succeeded' or job.state == 'run_failed':
                                 current += 1
+                            elif job.state == 'delayed' or job.state == 'spawned':
+                                pending += 1
                             elif job.state == 'finished':
                                 finished += 1
                             elif job.state == 'failed':
                                 failed += 1
-                    logging.info("currently servicing %d jobs and finished %d jobs of %d total jobs in %s" % (current, finished + failed, len(pickle.loads(batch.jobs)), batch_key))
+                    logging.info("currently servicing %d jobs and finished %d jobs of %d total jobs in %s" % (
+                        current, finished + failed, len(pickle.loads(batch.jobs)), batch_key))
                     if finished + failed == len(pickle.loads(batch.jobs)):
                         logging.info('all batch jobs have been completed, (%d failures)' % failed)
                         batch.state = 'finished'
@@ -99,7 +111,8 @@ class BatchMidwife(threading.Thread):
                         if self.client.exists(job_id):
                             job = pickle.loads(self.client.get(job_id))
                             if job.state == 'spawned' and current < batch.max_nodes:
-                                logging.info('detected empty slot (%d/%d) for %s, creating job' % (batch.max_nodes - current, batch.max_nodes, batch_key))
+                                logging.info('detected empty slot (%d/%d) for %s, creating job' % (
+                                    batch.max_nodes - current, batch.max_nodes, batch_key))
                                 job.state = 'received'
                                 self.client.set(job_id, pickle.dumps(job))
                                 self.client.publish('jobs', job_id)
