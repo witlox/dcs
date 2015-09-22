@@ -77,7 +77,7 @@ class Consuela(threading.Thread):
             logging.info('could not find a "real" batch id for %s' % job.batch_id)
             return False
         batch = pickle.loads(self.client.get(job.batch_id))
-        for batch_job_id in batch.jobs:
+        for batch_job_id in pickle.loads(batch.jobs):
             logging.debug('have job %s in batch %s' % (batch_job_id, job.batch_id))
             if batch_job_id != job_id:
                 logging.debug('found other job in batch, checking state')
