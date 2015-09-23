@@ -82,7 +82,7 @@ class Consuela(threading.Thread):
             if batch_job_id != job_id:
                 logging.debug('found other job in batch, checking state')
                 if self.client.exists(batch_job_id):
-                    batch_job = pickle.loads(batch_job_id)
+                    batch_job = pickle.loads(self.client.get(batch_job_id))
                     logging.debug('state is %s (for %s)' % (batch_job.state, batch_job_id))
                     if batch_job.state == 'spawned' or batch_job.state == 'received' or batch_job.state == 'delayed':
                         return True
