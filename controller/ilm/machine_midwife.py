@@ -40,12 +40,8 @@ class MachineMidwife(threading.Thread):
                 job = pickle.loads(self.client.get(job_id))
                 if job.state != 'received' and job.state != 'delayed':
                     continue
-                queue_full = self.choke_full()
-                # refresh job, the previous call can take some time and the state can become stale
-                if not self.client.exists(job_id):
-                    continue
                 job = pickle.loads(self.client.get(job_id))
-                if job.state == 'received' or (job.state == 'delayed' and not queue_full):
+                if job.state == 'received' or job.state == 'delayed':
                     recycled = False
                     for worker_id in self.client.keys('jm-*'):
                         existing_worker = pickle.loads(self.client.get(worker_id))
@@ -58,6 +54,10 @@ class MachineMidwife(threading.Thread):
                             recycled = True
                             break
                     if recycled:
+                        continue
+                    queue_full = self.choke_full()
+                    # refresh job, the previous call can take some time and the state can become stale
+                    if not self.client.exists(job_id):
                         continue
                     if not queue_full:
                         worker_id, reservation = aws.start_machine(job.ami, job.instance_type)
@@ -76,6 +76,7 @@ class MachineMidwife(threading.Thread):
                         self.client.set(job_id, pickle.dumps(job))
 
     def choke_full(self):
+        """Can we start more instances?"""
         instances = self.waldos()
         queue_full = False
         count = aws.active_instance_count()
@@ -85,10 +86,10 @@ class MachineMidwife(threading.Thread):
             logging.warning('you are currently using your maximum AWS EC2 capacity (%d/%d)' % (count, max_instances))
             queue_full = True
         if len(instances) >= self.settings.max_instances:
-            logging.warning('maximum (%d) amount of instances in use (%d), delaying start of new worker' % (len(instances), self.settings.max_instances))
+            logging.warning('maximum amount of instances in use (%d of %d), delaying start of new worker' % (len(instances), self.settings.max_instances))
             queue_full = True
         if max_storage is not None and max_storage >= self.settings.max_storage:
-            logging.warning('maximum (%d) amount of storage in use (%d), delaying start of new worker' % (max_storage, self.settings.max_storage))
+            logging.warning('maximum amount of storage in use (%d of %d), delaying start of new worker' % (max_storage, self.settings.max_storage))
             queue_full = True
         return queue_full
 

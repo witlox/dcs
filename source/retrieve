@@ -26,6 +26,8 @@ with paramiko.SSHClient() as ssh:
     ssh.connect(hostname=args['server'], username=args['username'], key_filename=args['key_file'])
     with scp.SCPClient(ssh.get_transport()) as sscp:
         sscp.get(args['batch_id'], args['path'], recursive=True)
-for directory in os.listdir(os.path.join(args['path'], args['batch_id'])):
-    shutil.move(os.path.join(args['path'], args['batch_id'], directory), os.path.join(args['path'], args['batch_id'], directory[4:]))
+for source_directory in os.listdir(os.path.join(args['path'], args['batch_id'])):
+    # Clean "job-" prefix and "_1" (bumboo) postfix from directory to form the local target directory.
+    target_directory = source_directory[4:str.rfind(source_directory, '_')]
+    shutil.move(os.path.join(args['path'], args['batch_id'], source_directory), os.path.join(args['path'], args['batch_id'], target_directory))
 print 'download done to %s' % args['path']
