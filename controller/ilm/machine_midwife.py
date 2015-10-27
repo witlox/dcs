@@ -40,6 +40,10 @@ class MachineMidwife(threading.Thread):
                 job = pickle.loads(self.client.get(job_id))
                 if job.state != 'received' and job.state != 'delayed':
                     continue
+                queue_full = self.choke_full()
+                # refresh job, the previous call can take some time and the state can become stale
+                if not self.client.exists(job_id):
+                    continue
                 job = pickle.loads(self.client.get(job_id))
                 if job.state == 'received' or job.state == 'delayed':
                     recycled = False
@@ -54,10 +58,6 @@ class MachineMidwife(threading.Thread):
                             recycled = True
                             break
                     if recycled:
-                        continue
-                    queue_full = self.choke_full()
-                    # refresh job, the previous call can take some time and the state can become stale
-                    if not self.client.exists(job_id):
                         continue
                     if not queue_full:
                         worker_id, reservation = aws.start_machine(job.ami, job.instance_type)
