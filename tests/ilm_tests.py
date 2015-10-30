@@ -139,7 +139,7 @@ class TestIlm(unittest.TestCase):
 
         midwife.run()
 
-        assert midwife.client.exists.call_count == 1
+        assert midwife.client.exists.call_count == 2
         assert len(midwife.client.set.call_args_list) == 2
         assert pickle.loads(midwife.client.set.call_args_list[0][0][1]).job_id == 'test'
         assert pickle.loads(midwife.client.set.call_args_list[1][0][1]).state == 'booted'
@@ -169,7 +169,7 @@ class TestIlm(unittest.TestCase):
 
         midwife.run()
 
-        assert midwife.client.exists.call_count == 1
+        assert midwife.client.exists.call_count == 2
         assert len(midwife.client.set.call_args_list) == 2
         assert pickle.loads(midwife.client.set.call_args_list[0][0][1]).job_id == 'test'
         assert pickle.loads(midwife.client.set.call_args_list[1][0][1]).state == 'booted'
@@ -420,7 +420,7 @@ class TestIlm(unittest.TestCase):
             cleaner.run()
 
             assert cleaner.client.exists.call_count == 1
-            assert worker_mock.call_count == 1
+            assert worker_mock.call_count == 0
 
 
 if __name__ == '__main__':
