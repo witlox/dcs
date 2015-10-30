@@ -54,12 +54,11 @@ class Consuela(threading.Thread):
                             terminate_worker(worker_id, worker.instance, self.client)
                 elif job.state == 'failed' and worker.instance is not None:
                     logging.warning('%s finished with failure' % job_id)
-                    if self.settings.auto_remove_failed:
+                    if self.settings.auto_remove_failed and not self.settings.recycle_workers:
                         logging.info('auto-remove on failure enabled, trying to remove %s' % worker.instance)
                         terminate_worker(worker_id, worker.instance, self.client)
                     else:
-                        logging.warning('auto-remove on failure disabled, manually remove %s!' % worker.instance)
-                    self.client.delete(worker_id)
+                        logging.warning('auto-remove on failure not performed, manually remove %s!' % worker.instance)
             elif worker_id and worker and worker.instance:
                 terminate_worker(worker_id, worker.instance, self.client)
             else:
