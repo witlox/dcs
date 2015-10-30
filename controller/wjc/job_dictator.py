@@ -36,9 +36,17 @@ class JobDictator(threading.Thread):
             try:
                 worker = None
                 for worker_key in self.client.keys('jm-*'):
-                    temp_worker = pickle.loads(self.client.get(worker_key))
-                    if temp_worker.job_id == job_id:
-                        worker = temp_worker
+                    client_worker = self.client.get(worker_key)
+                    if client_worker is not None:
+                        temp_worker = pickle.loads(client_worker)
+                        if temp_worker.job_id == job_id:
+                            worker = temp_worker
+                    else:
+                        logging.warning('Worker id %s prematurely removed from database, will fail job %s now.' % (worker_key, job_id))
+                        raise Exception
+                if worker is None:
+                    logging.warning('No worker found for job, will fail job %s now.' % job_id)
+                    raise Exception
                 if job.state == 'booted':
                     # check if state is ok
                     ami_status = requests.get('http://%s/ilm/ami/%s/status' % (self.settings.web, worker.instance),
