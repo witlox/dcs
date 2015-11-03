@@ -134,8 +134,8 @@ class TestWjc(unittest.TestCase):
         midwife = BatchMidwife()
         midwife.apprentice = mock.MagicMock()
         midwife.client = mock.MagicMock()
-        midwife.job_pub_sub = mock.MagicMock()
-        midwife.job_pub_sub.listen.return_value = [{'data': 'batch-lovelyhashcode'}]
+        midwife.batch_pub_sub = mock.MagicMock()
+        midwife.batch_pub_sub.listen.return_value = [{'data': 'batch-lovelyhashcode'}]
         midwife.client.exists.return_value = True
         batch = Batch('uploaded')
         midwife.client.get.return_value = pickle.dumps(batch)
