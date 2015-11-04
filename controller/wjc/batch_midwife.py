@@ -16,7 +16,7 @@ class BatchMidwife(threading.Thread):
     def __init__(self):
         with open('logging.json') as jl:
             dictConfig(json.load(jl))
-        logging.debug('BatchMidwife: Starting.')
+        logging.info('BatchMidwife: Starting.')
         threading.Thread.__init__(self)
         self.daemon = True
         self.headers = {'User-agent': 'dcs_ilm/1.0'}
@@ -29,45 +29,47 @@ class BatchMidwife(threading.Thread):
     def run(self):
         self.apprentice.start()
         for item in self.batch_pub_sub.listen():
-            if item['data'] == 'KILL':
+            batch_id = item['data']
+            if batch_id == 'KILL':
                 self.apprentice.halt()
                 self.batch_pub_sub.unsubscribe()
-                logging.debug('BatchMidwife: Stopping.')
-                break
-            else:
-                batch_id = item['data']
-                logging.debug('BatchMidwife: Redis signals for batch: ' + batch_id)
-                if not self.client.exists(batch_id):
-                    logging.warning('BatchMidwife: Redis signaled for non-existing batch: ' + batch_id)
-                    continue
-                batch = pickle.loads(self.client.get(batch_id))
-                logging.debug('BatchMidwife: Batch %s has state %s' % (batch_id, batch.state))
-                if batch.state != 'uploaded':
-                    continue
-                if batch.jobs is None:
-                    logging.info('BatchMidwife: Reading jobs from uploaded batch: ' + batch_id)
-                    debutantes = os.listdir('/tmp/store/%s' % batch_id)
-                    carousers = []
-                    for debutante in debutantes:
-                        bumboo = 1
-                        scallywag = debutante + "_" + str(bumboo)
-                        while scallywag in self.client.keys():
-                            bumboo += 1
-                            scallywag = scallywag[:-(len(str(bumboo - 1)))] + str(bumboo)
-                        if scallywag != debutante:
-                            shutil.move('/tmp/store/%s/%s' % (batch_id, debutante),
-                                        '/tmp/store/%s/%s' % (batch_id, scallywag))
-                        carousers.append(scallywag)
-                    batch.jobs = pickle.dumps(carousers)
-                    self.client.set(batch_id, pickle.dumps(batch))
-                    for job_id in carousers:
-                        job = Job('spawned', batch_id)
-                        job.ami = batch.ami
-                        job.instance_type = batch.instance_type
-                        self.client.set(job_id, pickle.dumps(job))
-                        self.client.publish('jobs', job_id)
-                    batch.state = 'running'
-                    self.client.set(batch_id, pickle.dumps(batch))
+                logging.info('BatchMidwife: Stopping.')
+                return
+            #
+            logging.debug('BatchMidwife: Redis signals for batch: ' + batch_id)
+            if not self.client.exists(batch_id):
+                logging.warning('BatchMidwife: Redis signaled for non-existing batch: ' + batch_id)
+                continue
+            batch = pickle.loads(self.client.get(batch_id))
+            logging.debug('BatchMidwife: Batch %s has state %s' % (batch_id, batch.state))
+            if batch.state != 'uploaded':
+                continue
+            #
+            if batch.jobs is not None:
+                continue
+            logging.info('BatchMidwife: Reading jobs from uploaded batch: ' + batch_id)
+            debutantes = os.listdir('/tmp/store/%s' % batch_id)
+            carousers = []
+            for debutante in debutantes:
+                bumboo = 1
+                scallywag = debutante + "_" + str(bumboo)
+                while scallywag in self.client.keys():
+                    bumboo += 1
+                    scallywag = scallywag[:-(len(str(bumboo - 1)))] + str(bumboo)
+                if scallywag != debutante:
+                    shutil.move('/tmp/store/%s/%s' % (batch_id, debutante),
+                                '/tmp/store/%s/%s' % (batch_id, scallywag))
+                carousers.append(scallywag)
+            batch.jobs = pickle.dumps(carousers)
+            self.client.set(batch_id, pickle.dumps(batch))
+            for job_id in carousers:
+                job = Job('spawned', batch_id)
+                job.ami = batch.ami
+                job.instance_type = batch.instance_type
+                self.client.set(job_id, pickle.dumps(job))
+                self.client.publish('jobs', job_id)
+            batch.state = 'running'
+            self.client.set(batch_id, pickle.dumps(batch))
 
     class Apprentice(threading.Thread):
         """ responsible for managing running batch state """
@@ -77,16 +79,17 @@ class BatchMidwife(threading.Thread):
             self.daemon = True
             self.client = client
             self.running = True
+            logging.info('BatchMidwife apprentice: Starting.')
 
         def halt(self):
             if not self.running:
-                logging.debug('Apprentice: Stopping.')
+                logging.info('BatchMidwife apprentice: Stopping.')
                 self.running = False
 
         def run(self):
             loop_count = 0
             while self.running:
-                for batch_id in self.client.keys('batch-*'):
+                for batch_id in [batch_key for batch_key in self.client.keys() if batch_key.startswith('batch-')]:  # Redis keys(pattern='*') does not filter at all.
                     if batch_id == 'KILL':
                         self.halt()
                         continue
@@ -108,8 +111,9 @@ class BatchMidwife(threading.Thread):
                             stale_jobs = True
                             break  # batch.jobs is stale
                         job = pickle.loads(pickled_job)
-                        if job.state == 'received' or job.state == 'requested' or job.state == 'booted' or \
-                                        job.state == 'running' or job.state == 'run_succeeded' or job.state == 'run_failed':
+                        if job.state == 'received' or job.state == 'requested' or \
+                           job.state == 'booted' or job.state == 'broken' or \
+                           job.state == 'running' or job.state == 'run_succeeded' or job.state == 'run_failed':
                             current += 1
                         elif job.state == 'delayed' or job.state == 'spawned':
                             pending += 1

@@ -13,8 +13,7 @@ def terminate_worker(worker_id, instance, client):
     result = aws.terminate_machine(instance)
     if result is None or len(result) == 0:
         logging.error('could not remove worker %s, remove manually!' % instance)
-    else:
-        client.delete(worker_id)
+    client.delete(worker_id)
 
 
 class Consuela(threading.Thread):
@@ -22,7 +21,7 @@ class Consuela(threading.Thread):
     def __init__(self):
         with open('logging.json') as jl:
             dictConfig(json.load(jl))
-        logging.info('consuela in house')
+        logging.info('Consuela: Starting.')
         threading.Thread.__init__(self)
         self.daemon = True
         self.settings = Settings()
@@ -35,8 +34,9 @@ class Consuela(threading.Thread):
             job_id = item['data']
             if job_id == 'KILL':
                 self.job_pub_sub.unsubscribe()
-                logging.info('consuela no home')
+                logging.info('Consuela: Stopping.')
                 return
+            #
             worker_id, worker = self.get_worker(job_id)
             if worker and self.client.exists(job_id):
                 job = pickle.loads(self.client.get(job_id))
@@ -59,14 +59,22 @@ class Consuela(threading.Thread):
                         terminate_worker(worker_id, worker.instance, self.client)
                     else:
                         logging.warning('auto-remove on failure not performed, manually remove %s!' % worker.instance)
+                elif job.state == 'broken' and worker.instance is not None:
+                    logging.info('Terminating worker with a broken job.')
+                    terminate_worker(worker_id, worker.instance, self.client)
+                    job.state = 'failed'
+                    self.client.set(job_id, pickle.dumps(job))
             elif worker_id and worker and worker.instance:
                 terminate_worker(worker_id, worker.instance, self.client)
             else:
                 logging.debug('no worker found for %s' % job_id)
 
     def get_worker(self, job_id):
-        for worker_id in self.client.keys('jm-*'):
-            worker = pickle.loads(self.client.get(worker_id))
+        for worker_id in [worker_key for worker_key in self.client.keys() if worker_key.startswith('jm-')]:  # Redis keys(pattern='*') does not filter at all.
+            pickled_worker = self.client.get(worker_id)
+            if pickled_worker is None:
+                continue
+            worker = pickle.loads(pickled_worker)
             if worker.job_id is not None and worker.job_id == job_id:
                 return worker_id, worker
         return None, None

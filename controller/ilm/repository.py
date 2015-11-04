@@ -16,7 +16,7 @@ class AmiRepository(threading.Thread):
             logging.exception('Problem instantiating ami repository (%s)' % e)
 
     def get_all_amis(self):
-        return self.client.keys('ami*')
+        return [ami_key for ami_key in self.client.keys() if ami_key.startswith('ami-')]  # Redis keys(pattern='*') does not filter at all.
 
     def insert_ami(self, ami, username, private_key):
         logging.info('registering new AMI %s with user %s' % (ami, username))
@@ -28,7 +28,7 @@ class AmiRepository(threading.Thread):
 
     def get_all_workers(self):
         result = []
-        for key in self.client.keys('jm-*'):
+        for key in [worker_key for worker_key in self.client.keys() if worker_key.startswith('jm-')]:  # Redis keys(pattern='*') does not filter at all.
             worker = pickle.loads(self.client.get(key))
             result.append([key, worker.job_id, worker.batch_id, worker.reservation, worker.instance, worker.request_time, worker.ip_address])
         return result

@@ -19,9 +19,9 @@ class JobRepository:
 
     def get_all_jobs(self):
         result = []
-        for job_key in self.client.keys('job-*'):
-            job = pickle.loads(self.client.get(job_key))
-            result.append([job_key, job.batch_id, job.state, job.ami, job.instance_type])
+        for job_id in [job_key for job_key in self.client.keys() if job_key.startswith('job-')]:  # Redis keys(pattern='*') does not filter at all.
+            job = pickle.loads(self.client.get(job_id))
+            result.append([job_id, job.batch_id, job.state, job.ami, job.instance_type])
         return result
 
     def get_job_state(self, job_id):
@@ -47,12 +47,12 @@ class JobRepository:
 
     def get_all_batches(self):
         result = []
-        for batch_key in self.client.keys('batch-*'):
-            batch = pickle.loads(self.client.get(batch_key))
+        for batch_id in [batch_key for batch_key in self.client.keys() if batch_key.startswith('batch-')]:  # Redis keys(pattern='*') does not filter at all.
+            batch = pickle.loads(self.client.get(batch_id))
             jobs = []
             if batch.jobs:
                 jobs = pickle.loads(batch.jobs)
-            result.append([batch_key, batch.state, batch.ami, batch.instance_type, batch.max_nodes, jobs])
+            result.append([batch_id, batch.state, batch.ami, batch.instance_type, batch.max_nodes, jobs])
         return result
 
     def execute_batch(self, max_nodes, ami, instance_type):
@@ -68,7 +68,7 @@ class JobRepository:
     def delete_batch(self, batch_id):
         if batch_id.startswith('batch-'):
             if self.client.exists(batch_id):
-                for job_id in self.client.keys('job-*'):
+                for job_id in [job_key for job_key in self.client.keys() if job_key.startswith('job-')]:  # Redis keys(pattern='*') does not filter at all.
                     job = pickle.loads(self.client.get(job_id))
                     if job.batch_id == batch_id:
                         self.client.delete(job_id)

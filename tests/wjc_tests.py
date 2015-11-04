@@ -44,7 +44,7 @@ class TestWjc(unittest.TestCase):
 
         dictator = JobDictator()
         dictator.client = mock.MagicMock()
-        dictator.client.keys.return_value = ['job-']
+        dictator.client.keys.return_value = ['job-', 'jm-']
         job = Job('booted', 'something')
         worker = Worker('job-', None)
         dictator.client.get.side_effect = [pickle.dumps(job), pickle.dumps(worker)]
@@ -71,7 +71,7 @@ class TestWjc(unittest.TestCase):
 
         dictator = JobDictator()
         dictator.client = mock.MagicMock()
-        dictator.client.keys.return_value = ['job-']
+        dictator.client.keys.return_value = ['job-', 'jm-']
         job = Job('run_succeeded', 'something')
         worker = Worker('job-', None)
         dictator.client.get.side_effect = [pickle.dumps(job), pickle.dumps(worker)]
@@ -100,7 +100,7 @@ class TestWjc(unittest.TestCase):
 
         dictator = JobDictator()
         dictator.client = mock.MagicMock()
-        dictator.client.keys.return_value = ['job-']
+        dictator.client.keys.return_value = ['job-', 'jm-']
         job = Job('running', 'something')
         job.run_started_on = datetime.now() - timedelta(minutes=10)
         worker = Worker('job-', None)
@@ -120,8 +120,8 @@ class TestWjc(unittest.TestCase):
         assert dictator.client.get.call_count == 2
         assert dictator.client.set.call_count == 1
         assert dictator.client.publish.call_count == 1
-        assert dictator.pull.call_count == 1
-        assert pickle.loads(dictator.client.set.call_args_list[0][0][1]).state == 'failed'
+        assert dictator.pull.call_count == 0
+        assert pickle.loads(dictator.client.set.call_args_list[0][0][1]).state == 'broken'
 
     @mock.patch('batch_midwife.BatchMidwife.__init__', mock.Mock(return_value=None))
     def test_batch_job_spawn(self):

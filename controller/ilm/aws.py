@@ -21,7 +21,7 @@ def start_machine(ami, instance):
 
     if not ec2:
         logging.error('Cannot connect to region %s' % settings.aws_region)
-        return None
+        return None, None
 
     worker_id = 'jm-%s' % uuid.uuid4()
     logging.info('Request workerID = %s' % worker_id)
@@ -37,7 +37,7 @@ def start_machine(ami, instance):
         return worker_id, reservation.id
     except Exception, e:
         logging.exception('Cannot reserve instance %s for type %s (%s)' % (ami, instance, e))
-        return None
+        return None, None
     finally:
         if ec2:
             ec2.close()

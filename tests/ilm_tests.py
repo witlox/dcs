@@ -40,6 +40,7 @@ class TestIlm(unittest.TestCase):
 
         from machine_midwife import MachineMidwife
         from job import Job
+        from worker import Worker
 
         midwife = MachineMidwife()
         midwife.apprentice = mock.MagicMock()
@@ -48,8 +49,10 @@ class TestIlm(unittest.TestCase):
         midwife.job_pub_sub = mock.MagicMock()
         midwife.job_pub_sub.listen.return_value = [{'data': 'test'}]
         midwife.client.exists.return_value = True
+        midwife.client.keys.return_value = ['job-', 'jm-']
         job = Job('received', 'something')
-        midwife.client.get.side_effect = [pickle.dumps(job), pickle.dumps(job)]
+        worker = Worker('job-', None)
+        midwife.client.get.side_effect = [pickle.dumps(job), pickle.dumps(worker)]
         midwife.client.set = mock.MagicMock()
         midwife.client.publish = mock.MagicMock()
 
@@ -82,7 +85,7 @@ class TestIlm(unittest.TestCase):
 
         midwife.run()
 
-        assert midwife.client.exists.call_count == 2
+        assert midwife.client.exists.call_count == 1
         assert len(midwife.client.set.call_args_list) == 1
         assert midwife.client.set.call_args_list[0][0][0] == 'test'
         assert pickle.loads(midwife.client.set.call_args_list[0][0][1]).state == 'delayed'
@@ -95,6 +98,7 @@ class TestIlm(unittest.TestCase):
 
         from machine_midwife import MachineMidwife
         from job import Job
+        from worker import Worker
 
         midwife = MachineMidwife()
         midwife.apprentice = mock.MagicMock()
@@ -103,8 +107,10 @@ class TestIlm(unittest.TestCase):
         midwife.job_pub_sub = mock.MagicMock()
         midwife.job_pub_sub.listen.return_value = [{'data': 'test'}]
         midwife.client.exists.return_value = True
+        midwife.client.keys.return_value = ['job-', 'jm-']
         job = Job('received', 'something')
-        midwife.client.get.side_effect = [pickle.dumps(job), pickle.dumps(job)]
+        worker = Worker('job-', None)
+        midwife.client.get.side_effect = [pickle.dumps(job), pickle.dumps(worker)]
         midwife.client.set = mock.MagicMock()
         midwife.client.publish = mock.MagicMock()
 
@@ -112,7 +118,7 @@ class TestIlm(unittest.TestCase):
 
         assert midwife.client.exists.call_count == 2
         assert len(midwife.client.set.call_args_list) == 1
-        assert pickle.loads(midwife.client.set.call_args_list[0][0][1]).state == 'failed'
+        assert pickle.loads(midwife.client.set.call_args_list[0][0][1]).state == 'delayed'
 
     @mock.patch('machine_midwife.MachineMidwife.__init__', mock.Mock(return_value=None))
     @mock.patch('machine_midwife.MachineMidwife.choke_full', mock.Mock(return_value=False))
@@ -133,7 +139,7 @@ class TestIlm(unittest.TestCase):
         worker.reservation = 'reservation'
         worker.request_time = datetime.now()
         midwife.client.keys.return_value = ['jm-']
-        midwife.client.get.side_effect = [pickle.dumps(job), pickle.dumps(job), pickle.dumps(worker)]
+        midwife.client.get.side_effect = [pickle.dumps(job), pickle.dumps(worker)]
         midwife.client.set = mock.MagicMock()
         midwife.client.publish = mock.MagicMock()
 
@@ -163,7 +169,7 @@ class TestIlm(unittest.TestCase):
         worker.reservation = 'reservation'
         worker.request_time = datetime.now()
         midwife.client.keys.return_value = ['jm-']
-        midwife.client.get.side_effect = [pickle.dumps(job), pickle.dumps(job), pickle.dumps(worker)]
+        midwife.client.get.side_effect = [pickle.dumps(job), pickle.dumps(worker)]
         midwife.client.set = mock.MagicMock()
         midwife.client.publish = mock.MagicMock()
 
