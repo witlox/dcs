@@ -36,9 +36,9 @@ class BatchMidwife(threading.Thread):
                 logging.info('BatchMidwife: Stopping.')
                 return
             #
-            logging.debug('BatchMidwife: Redis signals for batch: ' + batch_id)
+            logging.debug('BatchMidwife: Redis signals for batch: %s' % batch_id)
             if not self.client.exists(batch_id):
-                logging.warning('BatchMidwife: Redis signaled for non-existing batch: ' + batch_id)
+                logging.warning('BatchMidwife: Redis signaled for non-existing batch: %s' % batch_id)
                 continue
             batch = pickle.loads(self.client.get(batch_id))
             logging.debug('BatchMidwife: Batch %s has state %s' % (batch_id, batch.state))
@@ -47,7 +47,7 @@ class BatchMidwife(threading.Thread):
             #
             if batch.jobs is not None:
                 continue
-            logging.info('BatchMidwife: Reading jobs from uploaded batch: ' + batch_id)
+            logging.info('BatchMidwife: Reading jobs from uploaded batch: %s' % batch_id)
             debutantes = os.listdir('/tmp/store/%s' % batch_id)
             carousers = []
             for debutante in debutantes:

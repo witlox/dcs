@@ -39,9 +39,9 @@ class MachineMidwife(threading.Thread):
             #
             queue_full = self.choke_full()
             #
-            logging.debug('MachineMidwife: Redis signals for job: ' + job_id)
+            logging.debug('MachineMidwife: Redis signals for job: %s' % job_id)
             if not self.client.exists(job_id):
-                logging.warning('MachineMidwife: Redis signaled for non-existing job: ' + job_id)
+                logging.warning('MachineMidwife: Redis signaled for non-existing job: %s' % job_id)
                 continue
             job = pickle.loads(self.client.get(job_id))
             logging.debug('MachineMidwife: Job %s has state %s' % (job_id, job.state))
