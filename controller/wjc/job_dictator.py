@@ -97,33 +97,37 @@ class JobDictator(threading.Thread):
             logging.debug('script %s prepared' % ramon_file)
             # fish ami
             username, key_file = pickle.loads(self.client.get(ami))
-            with paramiko.SSHClient() as ssh:
-                ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                logging.info('establishing connection to push to %s using user %s' % (worker.ip_address, username))
-                with open('%s.key' % job_id, 'wb') as hairy:
-                    hairy.write(key_file)
-                ssh.connect(hostname=worker.ip_address, username=username, key_filename='%s.key' % job_id)
-                with scp.SCPClient(ssh.get_transport()) as s_scp:
-                    luke = '/tmp/store/%s/%s' % (batch_id, job_id)
-                    ssh.exec_command('mkdir %s' % job_id)
-                    here = os.getcwd()
-                    os.chdir(luke)
-                    s_scp.put('.', job_id, recursive=True)
-                    os.chdir(here)
-                    s_scp.put(ramon_file, ramon_file)
-                ssh.exec_command('chmod +x %s' % ramon_file)
-                start = 'virtualenv venv\nsource venv/bin/activate\npip install python-logstash requests\nnohup ./%s  > /dev/null 2>&1 &\n' % ramon_file
-                logging.debug('calling remote start with %s' % start)
-                _, out, err = ssh.exec_command(start)
-                output = out.readlines()
-                error = err.readlines()
-                if output:
-                    logging.info('%s output: %s' % (job_id, output))
-                if error:
-                    logging.error('%s error: %s' % (job_id, error))
-                    raise RuntimeError('error while executing remote run')
+            try:
+                with paramiko.SSHClient() as ssh:
+                    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                    logging.info('establishing connection to push to %s using user %s' % (worker.ip_address, username))
+                    with open('%s.key' % job_id, 'wb') as hairy:
+                        hairy.write(key_file)
+                    ssh.connect(hostname=worker.ip_address, username=username, key_filename='%s.key' % job_id)
+                    with scp.SCPClient(ssh.get_transport()) as s_scp:
+                        luke = '/tmp/store/%s/%s' % (batch_id, job_id)
+                        ssh.exec_command('mkdir %s' % job_id)
+                        here = os.getcwd()
+                        os.chdir(luke)
+                        s_scp.put('.', job_id, recursive=True)
+                        os.chdir(here)
+                        s_scp.put(ramon_file, ramon_file)
+                    ssh.exec_command('chmod +x %s' % ramon_file)
+                    start = 'virtualenv venv\nsource venv/bin/activate\npip install python-logstash requests\nnohup ./%s  > /dev/null 2>&1 &\n' % ramon_file
+                    logging.debug('calling remote start with %s' % start)
+                    _, out, err = ssh.exec_command(start)
+                    output = out.readlines()
+                    error = err.readlines()
+                    if output:
+                        logging.info('%s output: %s' % (job_id, output))
+                    if error:
+                        logging.error('%s error: %s' % (job_id, error))
+                        raise RuntimeError('error while executing remote run')
+                logging.info('started %s on %s' % (job_id, worker.instance))
+            except Exception as e:
+                logging.error('Error in push: %s' % e.message)
+                logging.warning('Fatal error while starting job %s on worker %s, clean up manually.' % (job_id, worker.instance))
             os.remove(ramon_file)
-            logging.info('started %s on %s' % (job_id, worker.instance))
 
     def pull(self, ami, batch_id, job_id, worker, clean=True, failed=False):
         destination = '/tmp/store/%s/%s' % (batch_id, job_id)
@@ -135,16 +139,20 @@ class JobDictator(threading.Thread):
                 return
         if failed:
             destination += '_failed'
-        with paramiko.SSHClient() as ssh:
-            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            username, key_file = pickle.loads(self.client.get(ami))
-            logging.info('establishing connection to pull from %s using user %s' % (worker.ip_address, username))
-            with open('%s.key' % job_id, 'wb') as hairy:
-                hairy.write(key_file)
-            ssh.connect(hostname=worker.ip_address, username=username, key_filename='%s.key' % job_id)
-            with scp.SCPClient(ssh.get_transport()) as s_scp:
-                s_scp.get(job_id, destination, recursive=True)
-            if clean:
-                ssh.exec_command('rm -rf %s' % job_id)
-                ssh.exec_command('rm -f %s.sh' % job_id)
-        logging.info('transferred results for %s, saved to %s' % (job_id, destination))
+        try:
+            with paramiko.SSHClient() as ssh:
+                ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                username, key_file = pickle.loads(self.client.get(ami))
+                logging.info('establishing connection to pull from %s using user %s' % (worker.ip_address, username))
+                with open('%s.key' % job_id, 'wb') as hairy:
+                    hairy.write(key_file)
+                ssh.connect(hostname=worker.ip_address, username=username, key_filename='%s.key' % job_id)
+                with scp.SCPClient(ssh.get_transport()) as s_scp:
+                    s_scp.get(job_id, destination, recursive=True)
+                if clean:
+                    ssh.exec_command('rm -rf %s' % job_id)
+                    ssh.exec_command('rm -f %s.sh' % job_id)
+            logging.info('transferred results for %s, saved to %s' % (job_id, destination))
+        except Exception as e:
+            logging.error('Error in pull: %s' % e.message)
+            logging.warning('Fatal error while retrieving job %s on worker %s, clean up manually.' % (job_id, worker.instance))
