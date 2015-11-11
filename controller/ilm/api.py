@@ -3,7 +3,6 @@ import aws
 from flask import Flask, request, jsonify, Response
 from flask.json import dumps
 from flask_autodoc import Autodoc
-
 from repository import AmiRepository
 from machine_midwife import MachineMidwife
 from consuela import Consuela

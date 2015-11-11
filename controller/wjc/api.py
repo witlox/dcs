@@ -2,7 +2,6 @@ from json import dumps
 import os
 from flask import Flask, Response, jsonify, request
 from flask_autodoc import Autodoc
-
 from repository import JobRepository
 from job_dictator import JobDictator
 from batch_midwife import BatchMidwife
