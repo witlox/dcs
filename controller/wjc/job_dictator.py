@@ -113,7 +113,7 @@ class JobDictator(threading.Thread):
                         os.chdir(here)
                         s_scp.put(ramon_file, ramon_file)
                     ssh.exec_command('chmod +x %s' % ramon_file)
-                    start = 'virtualenv venv\nsource venv/bin/activate\npip install python-logstash requests\nnohup ./%s  > /dev/null 2>&1 &\n' % ramon_file
+                    start = 'virtualenv venv\nsource venv/bin/activate\npip install --upgrade pip\npip install python-logstash requests\nnohup ./%s  > /dev/null 2>&1 &\n' % ramon_file
                     logging.debug('calling remote start with %s' % start)
                     _, out, err = ssh.exec_command(start)
                     output = out.readlines()
