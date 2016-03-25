@@ -127,7 +127,10 @@ class JobDictator(threading.Thread):
                 except Exception as e:
                     logging.error('Error in push: %s' % e.message)
                     logging.warning('Fatal error while starting job %s on worker %s, clean up manually.' % (job_id, worker.instance))
-            os.remove(ramon_file)
+            try:
+                os.remove(ramon_file)
+            except OSError as e:
+                logging.error('Error in push: %s' % e.message)
 
     def pull(self, ami, batch_id, job_id, worker, clean=True, failed=False):
         destination = '/tmp/store/%s/%s' % (batch_id, job_id)
