@@ -12,6 +12,7 @@ import redis
 import requests
 import paramiko
 import scp
+import socket
 
 from settings import Settings
 
@@ -83,54 +84,76 @@ class JobDictator(threading.Thread):
                     self.client.publish('jobs', job_id)
 
     def push(self, ami, batch_id, job_id, worker):
-        logging.info('found job %s to transmit to worker, preparing script' % job_id)
+        """Copy a job to a worker and start the job."""
+
+        logging.info('Found job %s to transmit to worker, preparing script.' % job_id)
         with open('ramon.py', 'r') as r:
             ramon = r.read()
-            ramon = ramon.replace('[web]', self.settings.web)
-            ramon = ramon.replace('[elk]', self.settings.elk)
-            ramon = ramon.replace('[uuid]', job_id)
-            ramon_file = '%s.sh' % job_id
-            with open(ramon_file, 'w') as smooth:
-                smooth.writelines(ramon)
-            st_fn = os.stat(ramon_file)
-            os.chmod(ramon_file, st_fn.st_mode | stat.S_IEXEC)
-            logging.debug('script %s prepared' % ramon_file)
-            # fish ami
-            username, key_file = pickle.loads(self.client.get(ami))
-            with paramiko.SSHClient() as ssh:
-                ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                logging.info('establishing connection to push to %s using user %s' % (worker.ip_address, username))
-                with open('%s.key' % job_id, 'wb') as hairy:
-                    hairy.write(key_file)
-                try:
-                    ssh.connect(hostname=worker.ip_address, username=username, key_filename='%s.key' % job_id)
-                    with scp.SCPClient(ssh.get_transport()) as s_scp:
-                        luke = '/tmp/store/%s/%s' % (batch_id, job_id)
-                        ssh.exec_command('mkdir %s' % job_id)
-                        here = os.getcwd()
-                        os.chdir(luke)
-                        s_scp.put('.', job_id, recursive=True)
-                        os.chdir(here)
-                        s_scp.put(ramon_file, ramon_file)
-                    ssh.exec_command('chmod +x %s' % ramon_file)
-                    start = 'virtualenv venv\nsource venv/bin/activate\npip install --upgrade pip\npip install python-logstash requests\nnohup ./%s  > /dev/null 2>&1 &\n' % ramon_file
-                    logging.debug('calling remote start with %s' % start)
-                    _, out, err = ssh.exec_command(start)
-                    output = out.readlines()
-                    error = err.readlines()
-                    if output:
-                        logging.info('%s output: %s' % (job_id, output))
-                    if error:
-                        logging.error('%s error: %s' % (job_id, error))
-                        raise RuntimeError('error while executing remote run')
-                    logging.info('started %s on %s' % (job_id, worker.instance))
-                except Exception as e:
-                    logging.error('Error in push: %s' % e.message)
-                    logging.warning('Fatal error while starting job %s on worker %s, clean up manually.' % (job_id, worker.instance))
+        ramon = ramon.replace('[web]', self.settings.web)
+        ramon = ramon.replace('[elk]', self.settings.elk)
+        ramon = ramon.replace('[uuid]', job_id)
+        ramon_file = '%s.sh' % job_id
+        with open(ramon_file, 'w') as smooth:
+            smooth.writelines(ramon)
+        st_fn = os.stat(ramon_file)
+        os.chmod(ramon_file, st_fn.st_mode | stat.S_IEXEC)
+        logging.debug('script %s prepared' % ramon_file)
+
+        # fish ami
+        username, key_file = pickle.loads(self.client.get(ami))
+        with paramiko.SSHClient() as ssh:
+            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            logging.info('Establishing connection to push to %s using user %s' % (worker.ip_address, username))
+            with open('%s.key' % job_id, 'wb') as hairy:
+                hairy.write(key_file)
             try:
-                os.remove(ramon_file)
-            except OSError as e:
+                ssh.connect(hostname=worker.ip_address, username=username, key_filename='%s.key' % job_id)
+
+                # Create job directory on the worker.
+                try:
+                    logging.debug('Creating job directory on the worker.')
+                    in_out_err = ssh.exec_command('mkdir %s' % job_id)  # Linux only
+                except SSHException as e:
+                    logging.error('Failed to preform ssh.exec_command:\n   Stdin: %s\n   Stdout: %s\n   Stderr: %s' % in_out_err)
+                    raise RuntimeError('***failed to create a job directory on the worker***')
+
+                # Copy job to the worker.
+                luke = '/tmp/store/%s/%s' % (batch_id, job_id)
+                here = os.getcwd()
+                os.chdir(luke)
+                with scp.SCPClient(ssh.get_transport()) as s_scp:
+                    logging.debug('Copying job data to worker through scp.')
+                    s_scp.put('.', job_id, recursive=True)
+                os.chdir(here)
+                with scp.SCPClient(ssh.get_transport()) as s_scp:
+                    logging.debug('Copying job runscript to worker through scp.')
+                    s_scp.put(ramon_file, ramon_file)
+
+                # Set execution bit on job runscript on the worker.
+                try:
+                    logging.debug('Setting execution bits on job runscript.')
+                    in_out_err = ssh.exec_command('chmod +x %s' % ramon_file)  # Linux only
+                except SSHException as e:
+                    logging.error('Failed to preform ssh.exec_command:\n   Stdin: %s\n   Stdout: %s\n   Stderr: %s' % in_out_err)
+                    raise RuntimeError('***failed to set execution bit on job runscript on the worker***')
+
+                # Start the job on the worker.
+                start = 'virtualenv venv\nsource venv/bin/activate\npip install --upgrade pip\npip install python-logstash requests\nnohup ./%s  > /dev/null 2>&1 &\n' % ramon_file  # Linux only
+                logging.debug('calling remote start with %s' % start)
+                _, out, err = ssh.exec_command(start)
+                output = out.readlines()
+                error = err.readlines()
+                if output:
+                    logging.info('%s output: %s' % (job_id, output))
+                if error:
+                    logging.error('%s error: %s' % (job_id, error))
+                    raise RuntimeError('error while starting remote job run')
+                logging.info('started %s on %s' % (job_id, worker.instance))
+            except (BadHostKeyException, AuthenticationException, SSHException, socket.error) as e:
+                logging.error('Unable to connect to worker using ssh: %s' % e.message)
+            except Exception as e:
                 logging.error('Error in push: %s' % e.message)
+                logging.warning('Fatal error while starting job %s on worker %s, clean up manually.' % (job_id, worker.instance))
 
     def pull(self, ami, batch_id, job_id, worker, clean=True, failed=False):
         destination = '/tmp/store/%s/%s' % (batch_id, job_id)
@@ -153,8 +176,8 @@ class JobDictator(threading.Thread):
                 with scp.SCPClient(ssh.get_transport()) as s_scp:
                     s_scp.get(job_id, destination, recursive=True)
                 if clean:
-                    ssh.exec_command('rm -rf %s' % job_id)
-                    ssh.exec_command('rm -f %s.sh' % job_id)
+                    ssh.exec_command('rm -rf %s' % job_id)  # Linux only
+                    ssh.exec_command('rm -f %s.sh' % job_id)  # Linux only
                 logging.info('transferred results for %s, saved to %s' % (job_id, destination))
             except Exception as e:
                 logging.error('Error in pull: %s' % e.message)
