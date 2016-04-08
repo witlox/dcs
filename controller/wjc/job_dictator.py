@@ -151,7 +151,7 @@ class JobDictator(threading.Thread):
                 logging.info('started %s on %s' % (job_id, worker.instance))
             except (paramiko.ssh_exception.BadHostKeyException, paramiko.ssh_exception.AuthenticationException,
                     paramiko.ssh_exception.SSHException, socket.error) as e:
-                logging.error('Unable to connect to worker using ssh: %s' % e.message)
+                logging.error('Unable to connect to, or lost connection to worker using ssh: %s' % e.message)
             except Exception as e:
                 logging.error('Error in push: %s' % e.message)
                 logging.warning('Fatal error while starting job %s on worker %s, clean up manually.' % (job_id, worker.instance))
