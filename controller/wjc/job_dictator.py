@@ -149,7 +149,8 @@ class JobDictator(threading.Thread):
                     logging.error('%s error: %s' % (job_id, error))
                     raise RuntimeError('error while starting remote job run')
                 logging.info('started %s on %s' % (job_id, worker.instance))
-            except (BadHostKeyException, AuthenticationException, SSHException, socket.error) as e:
+            except (paramiko.ssh_exception.BadHostKeyException, paramiko.ssh_exception.AuthenticationException,
+                    paramiko.ssh_exception.SSHException, socket.error) as e:
                 logging.error('Unable to connect to worker using ssh: %s' % e.message)
             except Exception as e:
                 logging.error('Error in push: %s' % e.message)
