@@ -28,6 +28,8 @@ class JobDictator(threading.Thread):
         self.client = redis.Redis('db')
         self.running = True
         logging.info('JobDictator: Starting.')
+        with open('ramon.py', 'r') as r:
+            self.ramon = r.read()
 
     def run(self):
         while self.running:
@@ -64,7 +66,7 @@ class JobDictator(threading.Thread):
                 if 'status:ok' not in ami_status.content.lower():
                     logging.info('AMI (%s) status (%s) NOK, waiting...' % (worker.instance, ami_status.content))
                     continue
-                self.push(job.ami, job.batch_id, job_id, worker)
+                self.push(job.ami, job.batch_id, job_id, worker, job)
             elif job.state == 'run_succeeded' or job.state == 'run_failed':
                 self.pull(job.ami, job.batch_id, job_id, worker)
                 if job.state == 'run_succeeded':
@@ -83,12 +85,11 @@ class JobDictator(threading.Thread):
                     self.client.set(job_id, pickle.dumps(job))
                     self.client.publish('jobs', job_id)
 
-    def push(self, ami, batch_id, job_id, worker):
+    def push(self, ami, batch_id, job_id, worker, job):
         """Copy a job to a worker and start the job."""
 
         logging.info('Found job %s to transmit to worker, preparing script.' % job_id)
-        with open('ramon.py', 'r') as r:
-            ramon = r.read()
+        ramon = self.ramon
         ramon = ramon.replace('[web]', self.settings.web)
         ramon = ramon.replace('[elk]', self.settings.elk)
         ramon = ramon.replace('[uuid]', job_id)
@@ -154,6 +155,9 @@ class JobDictator(threading.Thread):
                 logging.error('Unable to connect to, or lost connection to worker using ssh: %s' % e.message)
             except Exception as e:
                 logging.error('Error in push: %s' % e.message)
+                job.state = 'failed'
+                self.client.set(job_id, pickle.dumps(job))
+                self.client.publish('jobs', job_id)
                 logging.warning('Fatal error while starting job %s on worker %s, clean up manually.' % (job_id, worker.instance))
 
     def pull(self, ami, batch_id, job_id, worker, clean=True, failed=False):
