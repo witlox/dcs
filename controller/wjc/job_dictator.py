@@ -94,7 +94,13 @@ class JobDictator(threading.Thread):
         ramon = ramon.replace('[elk]', self.settings.elk)
         ramon = ramon.replace('[uuid]', job_id)
         ramon_file = '%s.sh' % job_id
-        with open(ramon_file, 'w') as smooth:
+        logging.debug('Creating new Ramon file in directory %s containing: %s' % (os.getcwd(), os.listdir(os.getcwd())))
+        if os.path.exist(ramon_file):
+            logging.warning('Ramon file already exists, will overwrite ' + ramon_file)
+        else:
+            f = open(ramon_file, 'w')
+            f.close()
+        with open(ramon_file) as smooth:
             smooth.writelines(ramon)
         st_fn = os.stat(ramon_file)
         os.chmod(ramon_file, st_fn.st_mode | stat.S_IEXEC)
