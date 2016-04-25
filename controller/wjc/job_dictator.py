@@ -95,7 +95,7 @@ class JobDictator(threading.Thread):
         ramon = ramon.replace('[uuid]', job_id)
         ramon_file = '%s.sh' % job_id
         logging.debug('Creating new Ramon file in directory %s containing: %s' % (os.getcwd(), os.listdir(os.getcwd())))
-        if os.path.exist(ramon_file):
+        if os.path.exists(ramon_file):
             logging.warning('Ramon file already exists, will overwrite ' + ramon_file)
         else:
             f = open(ramon_file, 'w')
