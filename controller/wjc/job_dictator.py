@@ -99,7 +99,7 @@ class JobDictator(threading.Thread):
             smooth.writelines(ramon)
         st_fn = os.stat(ramon_path)
         os.chmod(ramon_path, st_fn.st_mode | stat.S_IEXEC)
-        logging.debug('script %s prepared' % ramon_file)
+        logging.debug('script %s prepared in location' % (ramon_file, ramon_path))
 
         # fish ami
         username, key_file = pickle.loads(self.client.get(ami))
