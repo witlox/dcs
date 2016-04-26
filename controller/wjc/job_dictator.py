@@ -94,16 +94,14 @@ class JobDictator(threading.Thread):
         ramon = ramon.replace('[elk]', self.settings.elk)
         ramon = ramon.replace('[uuid]', job_id)
         ramon_file = '%s.sh' % job_id
-        logging.debug('Creating new Ramon file in directory %s containing: %s' % (os.getcwd(), os.listdir(os.getcwd())))
-        if os.path.exists(ramon_file):
-            logging.warning('Ramon file already exists, will overwrite ' + ramon_file)
-        else:
-            f = open(ramon_file, 'w')
-            f.close()
-        with open(ramon_file) as smooth:
+
+        here = os.getcwd()
+        os.chdir('/tmp/store')
+        with open(ramon_file, 'w') as smooth:
             smooth.writelines(ramon)
         st_fn = os.stat(ramon_file)
         os.chmod(ramon_file, st_fn.st_mode | stat.S_IEXEC)
+        os.chdir(here)
         logging.debug('script %s prepared' % ramon_file)
 
         # fish ami
@@ -131,10 +129,11 @@ class JobDictator(threading.Thread):
                 with scp.SCPClient(ssh.get_transport()) as s_scp:
                     logging.debug('Copying job data to worker through scp.')
                     s_scp.put('.', job_id, recursive=True)
-                os.chdir(here)
+                os.chdir('/tmp/store')
                 with scp.SCPClient(ssh.get_transport()) as s_scp:
                     logging.debug('Copying job runscript to worker through scp.')
                     s_scp.put(ramon_file, ramon_file)
+                os.chdir(here)
 
                 # Set execution bit on job runscript on the worker.
                 try:
