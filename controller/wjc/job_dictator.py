@@ -93,11 +93,12 @@ class JobDictator(threading.Thread):
         ramon = ramon.replace('[web]', self.settings.web)
         ramon = ramon.replace('[elk]', self.settings.elk)
         ramon = ramon.replace('[uuid]', job_id)
-        ramon_file = '/tmp/store/%s.sh' % job_id
-        with open(ramon_file, 'w') as smooth:
+        ramon_path = '/tmp/store/%s.sh' % job_id
+        ramon_file = '%s.sh' % job_id
+        with open(ramon_path, 'w') as smooth:
             smooth.writelines(ramon)
-        st_fn = os.stat(ramon_file)
-        os.chmod(ramon_file, st_fn.st_mode | stat.S_IEXEC)
+        st_fn = os.stat(ramon_path)
+        os.chmod(ramon_path, st_fn.st_mode | stat.S_IEXEC)
         logging.debug('script %s prepared' % ramon_file)
 
         # fish ami
@@ -125,8 +126,8 @@ class JobDictator(threading.Thread):
                     s_scp.put(luke, job_id, recursive=True)
                 with scp.SCPClient(ssh.get_transport()) as s_scp:
                     logging.debug('Copying job runscript to worker through scp.')
-                    s_scp.put(ramon_file, job_id+'.sh')
-                os.remove(ramon_file)
+                    s_scp.put(ramon_path, ramon_file)
+                os.remove(ramon_path)
 
                 # Set execution bit on job runscript on the worker.
                 try:
