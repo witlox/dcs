@@ -101,7 +101,6 @@ class JobDictator(threading.Thread):
             smooth.writelines(ramon)
         st_fn = os.stat(ramon_file)
         os.chmod(ramon_file, st_fn.st_mode | stat.S_IEXEC)
-        os.remove(ramon_file)
         os.chdir(here)
         logging.debug('script %s prepared' % ramon_file)
 
@@ -134,6 +133,7 @@ class JobDictator(threading.Thread):
                 with scp.SCPClient(ssh.get_transport()) as s_scp:
                     logging.debug('Copying job runscript to worker through scp.')
                     s_scp.put(ramon_file, ramon_file)
+                os.remove(ramon_file)
                 os.chdir(here)
 
                 # Set execution bit on job runscript on the worker.
