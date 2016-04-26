@@ -101,6 +101,7 @@ class JobDictator(threading.Thread):
             smooth.writelines(ramon)
         st_fn = os.stat(ramon_file)
         os.chmod(ramon_file, st_fn.st_mode | stat.S_IEXEC)
+        os.remove(ramon_file)
         os.chdir(here)
         logging.debug('script %s prepared' % ramon_file)
 
