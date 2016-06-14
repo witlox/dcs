@@ -102,6 +102,12 @@ class JobDictator(threading.Thread):
         logging.debug('script %s prepared in location %s' % (ramon_file, ramon_path))
 
         # fish ami
+        if ami not in self.client.keys():
+            logging.error('Error in push: Unknown AMI %s' % ami)
+            job.state = 'failed'
+            self.client.set(job_id, pickle.dumps(job))
+            self.client.publish('jobs', job_id)
+            return
         username, key_file = pickle.loads(self.client.get(ami))
         with paramiko.SSHClient() as ssh:
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
